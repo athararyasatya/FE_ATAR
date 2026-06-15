@@ -4,6 +4,7 @@ class AppRoutes {
 
   static const customerHome = '/customer-home';
   static const customerCart = '/customer-cart';
+  static const customerCheckout = '/customer-checkout'; // ← TAMBAHKAN INI
   static const customerOrders = '/customer-orders';
   static const customerProfile = '/customer-profile';
 
