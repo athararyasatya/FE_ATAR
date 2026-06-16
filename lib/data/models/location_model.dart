@@ -1,3 +1,5 @@
+// data/models/location_model.dart
+
 class LocationModel {
   final double latitude;
   final double longitude;
@@ -15,13 +17,13 @@ class LocationModel {
 }
 
 class StoreLocation {
-  // Ganti dengan koordinat toko Anda yang sebenarnya
-  static const double latitude = -6.200000;  // Contoh: -6.200000 (Jakarta)
-  static const double longitude = 106.816666; // Contoh: 106.816666
+  // ⬇️ KOORDINAT TOKO CURUG, TANGERANG ⬇️
+  static const double latitude = -6.282288;
+  static const double longitude = 106.554848;
   
   // Informasi toko
   static const String storeName = "Kanzza Frozen Food";
-  static const String address = "Jl. Contoh No. 123, Jakarta, Indonesia";
+  static const String address = "Jalan Raya PLP Curug No. 124, Legok, Tangerang Regency, Banten 15820, Indonesia";
   static const String phone = "+62 812-3456-7890";
   static const String email = "info@kanzza.com";
 }

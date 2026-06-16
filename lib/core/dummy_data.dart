@@ -18,7 +18,7 @@ class DummyData {
       name: "Athar Customer",
       email: "customer@kanzza.com",
       password: "123456",
-      role: "customer",
+      role: "customer",   
     ),
 
     DummyUser(

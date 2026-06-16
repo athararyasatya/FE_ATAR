@@ -7,7 +7,10 @@ import 'package:kanzza_sales_app_fe/core/widgets/search_bar.dart';
 import 'package:kanzza_sales_app_fe/core/widgets/promo_banner.dart';
 import 'package:kanzza_sales_app_fe/core/widgets/section_title.dart';
 import 'package:kanzza_sales_app_fe/core/widgets/product_card.dart';
+
 import 'customer_cart_page.dart';
+import 'customer_profile_page.dart';
+import 'customer_orders_page.dart'; // ⬅️ TAMBAHKAN IMPORT ORDERS
 
 class CustomerHomePage extends StatefulWidget {
   const CustomerHomePage({super.key});
@@ -97,7 +100,31 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   void _onNavTap(int index) {
+    // Index 0: Home
+    // Index 1: Orders
+    // Index 2: Cart
+    // Index 3: Profile
+    
+    if (index == 0) {
+      // Home - scroll ke atas
+      setState(() => currentIndex = 0);
+      return;
+    }
+    
+    if (index == 1) {
+      // Orders - navigate ke halaman orders ⬅️ PERBAIKAN UTAMA
+      setState(() => currentIndex = 1);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CustomerOrdersPage()),
+      ).then((_) {
+        if (mounted) setState(() => currentIndex = 0);
+      });
+      return;
+    }
+    
     if (index == 2) {
+      // Cart - navigate ke halaman keranjang
       setState(() => currentIndex = 2);
       Navigator.push(
         context,
@@ -107,21 +134,18 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       });
       return;
     }
-    if (index == 1 || index == 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            index == 1 ? "Halaman Order masih dibuat" : "Halaman Profile masih dibuat",
-            style: GoogleFonts.inter(color: const Color(0xFFF0EAFF)),
-          ),
-          backgroundColor: const Color(0xFF16162A),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+    
+    if (index == 3) {
+      // Profile - navigate ke halaman profil
+      setState(() => currentIndex = 3);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CustomerProfilePage()),
+      ).then((_) {
+        if (mounted) setState(() => currentIndex = 0);
+      });
       return;
     }
-    setState(() => currentIndex = index);
   }
 
   void _addToCart(Map<String, dynamic> product) {
@@ -176,7 +200,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                             const SizedBox(height: 16),
                             const Header(),
                             const SizedBox(height: 20),
-                            const SearchBar(),  // ← Perbaikan: tidak perlu const lagi jika ada parameter
+                            const SearchBar(),
                             const SizedBox(height: 20),
                             const PromoBanner(),
                             const SizedBox(height: 24),
@@ -207,7 +231,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                                   });
                                 },
                                 backgroundColor: const Color(0xFF16162A),
-                                selectedColor: const Color(0xFF9B5EFF).withValues(alpha: 0.2),
+                                selectedColor: const Color(0xFF9B5EFF).withOpacity(0.2),
                                 checkmarkColor: const Color(0xFF9B5EFF),
                                 labelStyle: GoogleFonts.inter(
                                   color: selected ? const Color(0xFF9B5EFF) : const Color(0xFF8B8BA8),
@@ -249,7 +273,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                             crossAxisCount: sw > 600 ? 3 : 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            mainAxisExtent: 285, // Tinggi fixed
+                            mainAxisExtent: 285,
                           ),
                           itemBuilder: (context, index) {
                             final product = filteredProducts[index];

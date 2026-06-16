@@ -1,3 +1,5 @@
+// lib/presentation/pages/auth/login_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,6 +31,21 @@ class _LoginPageState extends State<LoginPage> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  // ⬇️ TAMBAHKAN FUNGSI INI UNTUK RESET STATE ⬇️
+  @override
+  void initState() {
+    super.initState();
+    // Reset form saat halaman login dimuat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      emailController.clear();
+      passwordController.clear();
+      setState(() {
+        isLoading = false;
+        obscurePassword = true;
+      });
+    });
   }
 
   Future<void> login() async {
@@ -94,6 +111,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
     }
 
+    // ⬇️ GUNAKAN pushReplacement AGAR TIDAK BISA BACK KE LOGIN ⬇️
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => destination),

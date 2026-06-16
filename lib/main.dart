@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
+// lib/main.dart
 
-import 'presentation/pages/auth/login_page.dart';
-import 'presentation/pages/customer/customer_home_page.dart';
+import 'package:flutter/material.dart';
+import 'package:kanzza_sales_app_fe/core/theme/app_theme.dart';
+import 'package:kanzza_sales_app_fe/routes.dart';
 
 void main() {
   runApp(const KanzzaSalesApp());
@@ -16,10 +16,13 @@ class KanzzaSalesApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Kanzza Sales',
-
       theme: AppTheme.lightTheme,
-
-      home: const CustomerHomePage(),
+      initialRoute: AppRoutes.login,
+      routes: AppRoutes.routes,
+      // ⬇️ TAMBAHKAN INI ⬇️
+      navigatorKey: navigatorKey,
     );
   }
 }
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
