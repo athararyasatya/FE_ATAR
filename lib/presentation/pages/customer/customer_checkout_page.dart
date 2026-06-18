@@ -8,6 +8,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../data/models/cart_item.dart';
 import '../../../data/models/location_model.dart';
@@ -18,8 +20,8 @@ class CustomerCheckoutPage extends StatefulWidget {
 
   const CustomerCheckoutPage({
     super.key,
-    this.totalPrice = 0,        // ⬅️ BERI DEFAULT VALUE
-    this.cartItems = const [], // ⬅️ BERI DEFAULT VALUE
+    this.totalPrice = 0,
+    this.cartItems = const [],
   });
 
   @override
@@ -40,19 +42,27 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
   double _distance = 0;
   int _shippingCost = 0;
   bool _isCalculating = false;
+  bool _isGettingLocation = false;
   String _statusMessage = "";
   String _errorMessage = "";
+  String _currentAddress = "";
   
   String _deliveryMethod = "delivery";
   String _paymentMethod = "cod";
   
   final MapController _mapController = MapController();
+  
+  // FLAG: Untuk menandai apakah map sudah siap
+  bool _isMapReady = false;
 
   @override
   void initState() {
     super.initState();
     _storeLocation = LatLng(StoreLocation.latitude, StoreLocation.longitude);
     print("📍 Store Location: ${_storeLocation.latitude}, ${_storeLocation.longitude}");
+    
+    // Cek dan minta izin lokasi saat halaman dibuka
+    _checkLocationPermission();
   }
 
   @override
@@ -64,237 +74,234 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
     super.dispose();
   }
 
-  // ⬇️ CLEAN ADDRESS - HAPUS RT/RW ⬇️
-  String _cleanAddressForGeocoding(String address) {
-    String cleaned = address;
+  // ⬇️ CEK IZIN LOKASI ⬇️
+  Future<void> _checkLocationPermission() async {
+    final status = await Permission.location.status;
     
-    // Hapus RT/RW
-    cleaned = cleaned.replaceAll(RegExp(r'RT\s*\d+', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'RW\s*\d+', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'RT\.\s*\d+', caseSensitive: false), '');
-    cleaned = cleaned.replaceAll(RegExp(r'RW\.\s*\d+', caseSensitive: false), '');
-    
-    // Hapus "KP." (kampung)
-    cleaned = cleaned.replaceAll(RegExp(r'KP\.?\s*', caseSensitive: false), '');
-    
-    // Hapus "BLOK"
-    cleaned = cleaned.replaceAll(RegExp(r'BLOK\s*', caseSensitive: false), '');
-    
-    // Ganti "/" dengan ", "
-    cleaned = cleaned.replaceAll('/', ', ');
-    
-    // Bersihkan extra spaces
-    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
-    cleaned = cleaned.trim();
-    
-    print("🧹 Original: $address");
-    print("🧹 Cleaned: $cleaned");
-    
-    return cleaned;
-  }
-
-  // ⬇️ GEOCODING - NOMINATIM ⬇️
-  Future<LatLng?> _geocodeWithNominatim(String address) async {
-    try {
-      String cleanAddress = _cleanAddressForGeocoding(address);
-      
-      // Format alamat yang lebih lengkap
-      final List<String> addressFormats = [
-        "$cleanAddress, Legok, Tangerang, Banten, Indonesia",
-        "$cleanAddress, Kecamatan Legok, Kabupaten Tangerang, Banten, Indonesia",
-        "$cleanAddress, Tangerang, Indonesia",
-        "PLP Curug, Legok, Tangerang, Indonesia",
-      ];
-      
-      for (String format in addressFormats) {
-        String encodedAddress = Uri.encodeComponent(format);
-        
-        final url = "https://nominatim.openstreetmap.org/search?"
-            "q=$encodedAddress"
-            "&format=json"
-            "&limit=5"
-            "&countrycodes=id"
-            "&addressdetails=1"
-            "&namedetails=1"
-            "&viewbox=106.4500,-6.1500,106.7000,-6.4000"
-            "&bounded=1"
-            "&accept-language=id";
-        
-        print("🔍 Nominatim URL: $url");
-        
-        final response = await http.get(
-          Uri.parse(url),
-          headers: {
-            'User-Agent': 'KanzzaSalesApp/1.0',
-            'Accept-Language': 'id,en',
-          },
-        ).timeout(const Duration(seconds: 15));
-        
-        print("📡 Nominatim Status: ${response.statusCode}");
-        
-        if (response.statusCode == 200) {
-          final List data = json.decode(response.body);
-          print("📊 Nominatim Results: ${data.length}");
-          
-          if (data.isNotEmpty) {
-            // Cetak semua hasil untuk debugging
-            for (int i = 0; i < data.length; i++) {
-              final item = data[i];
-              print("   Result $i: ${item['display_name']} -> lat=${item['lat']}, lon=${item['lon']}");
-            }
-            
-            // Prioritaskan hasil yang mengandung "Legok" atau "Curug" atau "PLP"
-            LatLng? bestResult;
-            for (var item in data) {
-              final displayName = item['display_name'] ?? '';
-              final lat = double.parse(item['lat']);
-              final lon = double.parse(item['lon']);
-              
-              // Cek apakah hasil berada di area Legok/Curug
-              if (displayName.contains('Legok') || 
-                  displayName.contains('Curug') || 
-                  displayName.contains('PLP') ||
-                  displayName.contains('Bambu')) {
-                bestResult = LatLng(lat, lon);
-                print("✅ Nominatim found (prioritized): $displayName");
-                print("📍 Coordinates: lat=$lat, lon=$lon");
-                break;
-              }
-            }
-            
-            if (bestResult != null) return bestResult;
-            
-            // Jika tidak ada yang diprioritaskan, ambil yang pertama
-            final lat = double.parse(data[0]['lat']);
-            final lon = double.parse(data[0]['lon']);
-            print("✅ Nominatim found (first): ${data[0]['display_name']}");
-            print("📍 Coordinates: lat=$lat, lon=$lon");
-            return LatLng(lat, lon);
-          }
-        }
+    if (status.isDenied || status.isRestricted) {
+      final result = await Permission.location.request();
+      if (result.isGranted) {
+        print("✅ Izin lokasi diberikan");
+        await _getCurrentLocation();
+      } else {
+        setState(() {
+          _errorMessage = "Izin lokasi diperlukan untuk menampilkan rute pengiriman.\n\nSilakan aktifkan izin lokasi di pengaturan perangkat Anda.";
+        });
       }
-    } catch (e) {
-      print("❌ Nominatim error: $e");
+    } else if (status.isGranted) {
+      print("✅ Izin lokasi sudah ada");
+      await _getCurrentLocation();
+    } else if (status.isPermanentlyDenied) {
+      setState(() {
+        _errorMessage = "Izin lokasi ditolak permanen.\n\nSilakan aktifkan izin lokasi di pengaturan perangkat Anda.";
+      });
+      await openAppSettings();
     }
-    return null;
   }
 
-  // ⬇️ GEOCODING - PHOTON (ALTERNATIF) ⬇️
-  Future<LatLng?> _geocodeWithPhoton(String address) async {
+  // ⬇️ GET CURRENT LOCATION USING GPS ⬇️
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isGettingLocation = true;
+      _statusMessage = "📍 Mendapatkan lokasi Anda...";
+      _errorMessage = "";
+    });
+
     try {
-      String cleanAddress = _cleanAddressForGeocoding(address);
-      String encodedAddress = Uri.encodeComponent("$cleanAddress, Legok, Tangerang");
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _isGettingLocation = false;
+          _statusMessage = "";
+          _errorMessage = "GPS tidak aktif.\n\nSilakan aktifkan GPS di pengaturan perangkat Anda.";
+        });
+        _showRetryLocationDialog();
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+
+      print("📍 Lokasi GPS didapatkan:");
+      print("   Latitude: ${position.latitude}");
+      print("   Longitude: ${position.longitude}");
+
+      LatLng userLocation = LatLng(position.latitude, position.longitude);
       
-      final url = "https://photon.komoot.io/api/"
-          "?q=$encodedAddress"
-          "&limit=5"
-          "&lang=id"
-          "&lon=${_storeLocation.longitude}"
-          "&lat=${_storeLocation.latitude}";
+      String address = await _getAddressFromCoordinates(userLocation);
       
-      print("🔍 Photon URL: $url");
+      setState(() {
+        _userLocation = userLocation;
+        _currentAddress = address;
+        _addressController.text = address;
+        _isGettingLocation = false;
+        _statusMessage = "✅ Lokasi ditemukan!";
+        _errorMessage = "";
+      });
+
+      _showSuccessSnackBar("✅ Lokasi berhasil didapatkan!\nAlamat: $address");
+
+      // PERBAIKAN: Pindahkan peta hanya jika map sudah siap
+      if (_isMapReady) {
+        _mapController.move(userLocation, 16.0);
+      } else {
+        print("⏳ Map belum siap, akan dipindahkan nanti");
+        // Tunggu sejenak lalu coba lagi
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (_isMapReady && mounted) {
+            _mapController.move(userLocation, 16.0);
+          }
+        });
+      }
+
+      await _checkRoute();
+
+    } catch (e) {
+      print("❌ Error getting location: $e");
+      setState(() {
+        _isGettingLocation = false;
+        _statusMessage = "";
+        _errorMessage = "Gagal mendapatkan lokasi.\n\nPastikan GPS aktif dan coba lagi.\n\nError: $e";
+      });
+      
+      if (_userLocation == null) {
+        _showRetryLocationDialog();
+      }
+    }
+  }
+
+  // ⬇️ REVERSE GEOCODING ⬇️
+  Future<String> _getAddressFromCoordinates(LatLng coordinates) async {
+    try {
+      final url = "https://nominatim.openstreetmap.org/reverse?"
+          "lat=${coordinates.latitude}"
+          "&lon=${coordinates.longitude}"
+          "&format=json"
+          "&addressdetails=1"
+          "&accept-language=id";
+      
+      print("🔍 Reverse Geocoding URL: $url");
       
       final response = await http.get(
         Uri.parse(url),
-      ).timeout(const Duration(seconds: 15));
-      
-      print("📡 Photon Status: ${response.statusCode}");
+        headers: {
+          'User-Agent': 'KanzzaSalesApp/1.0',
+          'Accept-Language': 'id,en',
+        },
+      ).timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final features = data['features'] as List?;
         
-        if (features != null && features.isNotEmpty) {
-          // Cetak semua hasil
-          for (int i = 0; i < features.length; i++) {
-            final feature = features[i];
-            final props = feature['properties'] ?? {};
-            final coords = feature['geometry']['coordinates'] as List;
-            print("   Photon $i: ${props['name'] ?? 'unknown'} -> lat=${coords[1]}, lon=${coords[0]}");
-          }
-          
-          // Prioritaskan hasil yang mengandung "Legok" atau "Curug"
-          LatLng? bestResult;
-          for (var feature in features) {
-            final props = feature['properties'] ?? {};
-            final coords = feature['geometry']['coordinates'] as List;
-            final name = props['name'] ?? '';
-            final city = props['city'] ?? '';
-            final state = props['state'] ?? '';
-            
-            final fullName = "$name $city $state".toLowerCase();
-            
-            if (fullName.contains('legok') || 
-                fullName.contains('curug') || 
-                fullName.contains('plp')) {
-              bestResult = LatLng(coords[1], coords[0]);
-              print("✅ Photon found (prioritized): $name, $city");
-              break;
-            }
-          }
-          
-          if (bestResult != null) return bestResult;
-          
-          // Ambil yang pertama
-          final coords = features[0]['geometry']['coordinates'] as List;
-          print("✅ Photon found (first): ${coords[1]}, ${coords[0]}");
-          return LatLng(coords[1], coords[0]);
+        String address = "Lokasi saat ini";
+        
+        if (data['display_name'] != null && data['display_name'].toString().isNotEmpty) {
+          address = data['display_name'];
+        } else if (data['address'] != null) {
+          final addr = data['address'];
+          List<String> parts = [];
+          if (addr['road'] != null && addr['road'].toString().isNotEmpty) parts.add(addr['road']);
+          if (addr['village'] != null && addr['village'].toString().isNotEmpty) parts.add(addr['village']);
+          if (addr['town'] != null && addr['town'].toString().isNotEmpty) parts.add(addr['town']);
+          if (addr['city'] != null && addr['city'].toString().isNotEmpty) parts.add(addr['city']);
+          if (parts.isNotEmpty) address = parts.join(', ');
         }
+        
+        print("✅ Reverse geocoding success: $address");
+        return address;
+      } else {
+        print("⚠️ Reverse geocoding status: ${response.statusCode}");
+        return "Lokasi saat ini (${coordinates.latitude.toStringAsFixed(6)}, ${coordinates.longitude.toStringAsFixed(6)})";
       }
     } catch (e) {
-      print("❌ Photon error: $e");
+      print("❌ Reverse geocoding error: $e");
+      return "Lokasi saat ini (${coordinates.latitude.toStringAsFixed(6)}, ${coordinates.longitude.toStringAsFixed(6)})";
     }
-    return null;
   }
 
-  // ⬇️ MAIN GEOCODING FUNCTION ⬇️
-  Future<LatLng?> _getCoordinatesFromAddress(String address) async {
-    print("📍 ===== SEARCHING FOR ADDRESS =====");
-    print("📍 Address: $address");
-    
-    // 1. Coba Nominatim
-    LatLng? result = await _geocodeWithNominatim(address);
-    if (result != null) {
-      print("✅ FINAL: Using Nominatim result");
-      return result;
+  // ⬇️ TAMPILKAN DIALOG RETRY LOKASI ⬇️
+  void _showRetryLocationDialog() {
+    if (_userLocation != null) {
+      print("✅ Lokasi sudah ada, tidak perlu menampilkan dialog error");
+      return;
     }
     
-    // 2. Coba Photon (fallback)
-    result = await _geocodeWithPhoton(address);
-    if (result != null) {
-      print("✅ FINAL: Using Photon result");
-      return result;
-    }
-    
-    // 3. Jika semua gagal, coba dengan alamat yang lebih sederhana
-    try {
-      String cleanAddress = _cleanAddressForGeocoding(address);
-      final words = cleanAddress.split(RegExp(r'[\s,]+'));
-      // Ambil kata-kata penting (jalan + kelurahan)
-      String simpleAddress = "";
-      for (var word in words) {
-        if (word.length > 3 && 
-            !word.contains('RT') && 
-            !word.contains('RW') && 
-            !word.contains('KP') &&
-            !word.contains('BLOK')) {
-          simpleAddress += word + " ";
-        }
-      }
-      simpleAddress = "$simpleAddress, Legok, Tangerang";
-      print("🔄 Trying simple address: $simpleAddress");
-      
-      result = await _geocodeWithNominatim(simpleAddress);
-      if (result != null) {
-        print("✅ FINAL: Using simple address result");
-        return result;
-      }
-    } catch (e) {
-      print("❌ Simple address error: $e");
-    }
-    
-    print("❌ All geocoding methods failed");
-    return null;
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF16162A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFF1E1E35)),
+        ),
+        title: Text(
+          "Gagal Mendapatkan Lokasi",
+          style: GoogleFonts.poppins(color: const Color(0xFFF0EAFF), fontWeight: FontWeight.w600),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Tidak dapat mendapatkan lokasi Anda. Pastikan:",
+              style: GoogleFonts.inter(color: const Color(0xFF9B97B8)),
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF9B5EFF), size: 16),
+                SizedBox(width: 8),
+                Text("GPS aktif", style: TextStyle(color: Color(0xFFF0EAFF), fontSize: 13)),
+              ],
+            ),
+            const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF9B5EFF), size: 16),
+                SizedBox(width: 8),
+                Text("Izin lokasi diberikan", style: TextStyle(color: Color(0xFFF0EAFF), fontSize: 13)),
+              ],
+            ),
+            const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF9B5EFF), size: 16),
+                SizedBox(width: 8),
+                Text("Berada di luar ruangan", style: TextStyle(color: Color(0xFFF0EAFF), fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Anda juga bisa memasukkan alamat secara manual jika tetap gagal.",
+              style: GoogleFonts.inter(color: const Color(0xFF9B97B8), fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _errorMessage = "Silakan masukkan alamat secara manual";
+              });
+            },
+            child: Text("Masukkan Manual", style: GoogleFonts.inter(color: const Color(0xFF9B97B8))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _getCurrentLocation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF9B5EFF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text("Coba Lagi", style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ⬇️ ROUTING - DAPATKAN RUTE DARI OSRM ⬇️
@@ -346,7 +353,7 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
     return [];
   }
 
-  // ⬇️ CALCULATE STRAIGHT DISTANCE (FALLBACK) ⬇️
+  // ⬇️ CALCULATE STRAIGHT DISTANCE ⬇️
   double _calculateStraightDistance(LatLng start, LatLng end) {
     const double R = 6371;
     double dLat = _toRadians(end.latitude - start.latitude);
@@ -363,75 +370,43 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
     return degree * pi / 180;
   }
 
-  // ⬇️ MAIN FUNCTION - CEK LOKASI DAN RUTE ⬇️
-  Future<void> _checkLocationAndRoute() async {
-    if (_addressController.text.isEmpty) {
-      _showErrorSnackBar("Masukkan alamat lengkap terlebih dahulu");
+  // ⬇️ MAIN FUNCTION - CEK RUTE ⬇️
+  Future<void> _checkRoute() async {
+    if (_userLocation == null) {
+      _showErrorSnackBar("Lokasi tidak ditemukan. Klik 'Cek Lokasi' terlebih dahulu.");
       return;
     }
     
     setState(() {
       _isCalculating = true;
-      _statusMessage = "🔍 Mencari lokasi dari alamat...";
+      _statusMessage = "🗺️ Mendapatkan rute perjalanan...";
       _errorMessage = "";
       _routePoints = [];
-      _userLocation = null;
     });
     
     try {
-      String fullAddress = _addressController.text.trim();
-      if (_detailAddressController.text.trim().isNotEmpty) {
-        fullAddress = "${_addressController.text.trim()}, ${_detailAddressController.text.trim()}";
-      }
-      
-      print("📍 ===== CHECKOUT LOCATION SEARCH =====");
-      print("📍 Full Address: $fullAddress");
-      
-      setState(() {
-        _statusMessage = "🌐 Mencari koordinat alamat...";
-      });
-      
-      LatLng? userLocation = await _getCoordinatesFromAddress(fullAddress);
-      
-      if (userLocation == null) {
-        setState(() {
-          _isCalculating = false;
-          _statusMessage = "";
-          _errorMessage = "Alamat tidak ditemukan.\n\nTips:\n1. Gunakan format: Nama Jalan, Kecamatan, Kota\n2. Contoh: Jalan Raya PLP Curug, Legok, Tangerang\n3. Pastikan alamat lengkap dan benar";
-        });
-        _showErrorSnackBar("Alamat tidak ditemukan.\nCoba format: Nama Jalan, Kecamatan, Kota");
-        return;
-      }
-      
-      setState(() {
-        _userLocation = userLocation;
-        _statusMessage = "🗺️ Mendapatkan rute perjalanan...";
-      });
-      
       print("📍 Store: ${_storeLocation.latitude}, ${_storeLocation.longitude}");
-      print("📍 User: ${userLocation.latitude}, ${userLocation.longitude}");
+      print("📍 User: ${_userLocation!.latitude}, ${_userLocation!.longitude}");
       
-      // Cek jarak antara toko dan user
-      double distanceCheck = _calculateStraightDistance(_storeLocation, userLocation);
+      double distanceCheck = _calculateStraightDistance(_storeLocation, _userLocation!);
       print("📏 Distance check: ${distanceCheck.toStringAsFixed(3)} km");
       
       if (distanceCheck < 0.01) {
-        // Jika jarak terlalu dekat, gunakan koordinat area lain
         setState(() {
-          _errorMessage = "Alamat terlalu dekat dengan toko.\nGunakan alamat yang lebih spesifik.";
+          _errorMessage = "Lokasi terlalu dekat dengan toko.";
           _isCalculating = false;
           _statusMessage = "";
         });
-        _showErrorSnackBar("Alamat terlalu dekat dengan toko. Gunakan alamat yang lebih spesifik.");
+        _showErrorSnackBar("Lokasi terlalu dekat dengan toko.");
         return;
       }
       
-      List<LatLng> routePoints = await _getRouteFromOSRM(_storeLocation, userLocation);
+      List<LatLng> routePoints = await _getRouteFromOSRM(_storeLocation, _userLocation!);
       
       if (routePoints.isNotEmpty && routePoints.length > 1) {
         setState(() {
           _routePoints = routePoints;
-          _statusMessage = "";
+          _statusMessage = "✅ Rute ditemukan!";
           _isCalculating = false;
         });
         
@@ -443,12 +418,12 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
           "Ongkir: Rp ${_formatPrice(_shippingCost)}"
         );
       } else {
-        double distance = _calculateStraightDistance(_storeLocation, userLocation);
+        double distance = _calculateStraightDistance(_storeLocation, _userLocation!);
         setState(() {
           _distance = distance;
           _shippingCost = (distance * 5000).round();
-          _routePoints = [_storeLocation, userLocation];
-          _statusMessage = "";
+          _routePoints = [_storeLocation, _userLocation!];
+          _statusMessage = "⚠️ Menggunakan estimasi garis lurus";
           _isCalculating = false;
         });
         
@@ -462,19 +437,43 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
       }
       
     } catch (e) {
-      print("❌ Error: $e");
+      print("❌ Error checking route: $e");
       setState(() {
         _isCalculating = false;
         _statusMessage = "";
-        _errorMessage = "Terjadi kesalahan. Periksa koneksi internet Anda.";
+        _errorMessage = "Gagal mendapatkan rute.\n\nPeriksa koneksi internet Anda.";
       });
-      _showErrorSnackBar("Terjadi kesalahan. Periksa koneksi internet Anda.");
+      _showErrorSnackBar("Gagal mendapatkan rute. Periksa koneksi internet.");
+      
+      if (_userLocation != null) {
+        setState(() {
+          _routePoints = [_storeLocation, _userLocation!];
+          double distance = _calculateStraightDistance(_storeLocation, _userLocation!);
+          _distance = distance;
+          _shippingCost = (distance * 5000).round();
+        });
+        _zoomToRoute();
+      }
     }
   }
 
   // ⬇️ ZOOM TO RUTE ⬇️
   void _zoomToRoute() {
-    if (_routePoints.isEmpty || _userLocation == null) return;
+    if (_routePoints.isEmpty || _userLocation == null) {
+      print("⚠️ Tidak ada route points untuk di-zoom");
+      return;
+    }
+    
+    // PERBAIKAN: Cek apakah map sudah siap
+    if (!_isMapReady) {
+      print("⏳ Map belum siap, akan di-zoom nanti");
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (_isMapReady && mounted) {
+          _zoomToRoute();
+        }
+      });
+      return;
+    }
     
     try {
       double minLat = _storeLocation.latitude;
@@ -487,6 +486,11 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
         if (point.latitude > maxLat) maxLat = point.latitude;
         if (point.longitude < minLng) minLng = point.longitude;
         if (point.longitude > maxLng) maxLng = point.longitude;
+      }
+      
+      if (minLat == maxLat && minLng == maxLng) {
+        _mapController.move(_userLocation!, 15.0);
+        return;
       }
       
       final latPadding = (maxLat - minLat) * 0.3;
@@ -505,12 +509,24 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
       else if (maxDiff > 0.05) zoom = 14.0;
       else zoom = 15.0;
       
+      print("📍 Zooming to: center=($centerLat, $centerLng), zoom=$zoom");
       _mapController.move(LatLng(centerLat, centerLng), zoom);
     } catch (e) {
-      print("Error zooming: $e");
+      print("❌ Error zooming: $e");
+      try {
+        _mapController.move(_userLocation!, 14.0);
+      } catch (e2) {
+        print("❌ Error fallback zoom: $e2");
+      }
     }
   }
 
+  // ⬇️ GET LOCATION BUTTON HANDLER ⬇️
+  Future<void> _handleGetLocation() async {
+    await _getCurrentLocation();
+  }
+
+  // ⬇️ SNACKBARS ⬇️
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -549,12 +565,8 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
       _showErrorSnackBar("Nomor telepon harus diisi");
       return;
     }
-    if (_deliveryMethod == "delivery" && _addressController.text.isEmpty) {
-      _showErrorSnackBar("Alamat harus diisi");
-      return;
-    }
     if (_deliveryMethod == "delivery" && _userLocation == null) {
-      _showErrorSnackBar("Klik 'Cek Ongkir & Rute' terlebih dahulu");
+      _showErrorSnackBar("Klik 'Cek Lokasi' terlebih dahulu");
       return;
     }
     
@@ -696,34 +708,52 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
                       if (_deliveryMethod == "delivery") ...[
                         _buildAddressForm(),
                         const SizedBox(height: 16),
-                        _buildAlamatForm(),
-                        const SizedBox(height: 16),
-                        _buildCheckButton(),
+                        _buildLocationButton(),
                         const SizedBox(height: 16),
                         
                         if (_statusMessage.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF9B5EFF).withOpacity(0.1),
+                              color: _statusMessage.contains("✅") 
+                                  ? Colors.green.withOpacity(0.1)
+                                  : _statusMessage.contains("⚠️")
+                                      ? Colors.orange.withOpacity(0.1)
+                                      : const Color(0xFF9B5EFF).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _statusMessage.contains("✅")
+                                    ? Colors.green.withOpacity(0.3)
+                                    : _statusMessage.contains("⚠️")
+                                        ? Colors.orange.withOpacity(0.3)
+                                        : const Color(0xFF9B5EFF).withOpacity(0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF9B5EFF),
-                                  ),
+                                Icon(
+                                  _statusMessage.contains("✅") 
+                                      ? Icons.check_circle
+                                      : _statusMessage.contains("⚠️")
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.location_searching,
+                                  color: _statusMessage.contains("✅")
+                                      ? Colors.green
+                                      : _statusMessage.contains("⚠️")
+                                          ? Colors.orange
+                                          : const Color(0xFF9B5EFF),
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     _statusMessage,
                                     style: GoogleFonts.inter(
-                                      color: const Color(0xFF9B97B8),
+                                      color: _statusMessage.contains("✅")
+                                          ? Colors.green.shade300
+                                          : _statusMessage.contains("⚠️")
+                                              ? Colors.orange.shade300
+                                              : const Color(0xFF9B97B8),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -741,6 +771,7 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
                               border: Border.all(color: Colors.red.withOpacity(0.3)),
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(Icons.error_outline, color: Colors.red, size: 20),
                                 const SizedBox(width: 12),
@@ -802,7 +833,7 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
         children: [
           _buildRadioOption(
             title: "Di Antar ke Alamat",
-            subtitle: "Pesanan akan diantar ke alamat Anda",
+            subtitle: "Pesanan akan diantar ke lokasi Anda",
             value: "delivery",
             groupValue: _deliveryMethod,
             icon: Icons.delivery_dining,
@@ -915,29 +946,16 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAlamatForm() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E1E35), width: 1),
-      ),
-      child: Column(
-        children: [
+          const SizedBox(height: 16),
           TextField(
             controller: _addressController,
             style: GoogleFonts.inter(color: const Color(0xFFF0EAFF), fontSize: 14),
-            maxLines: 3,
+            maxLines: 2,
+            readOnly: true,
             decoration: InputDecoration(
-              labelText: "Alamat Lengkap",
+              labelText: "Alamat (Otomatis dari GPS)",
               labelStyle: GoogleFonts.inter(color: const Color(0xFF9B97B8), fontSize: 12),
-              hintText: "Contoh: Jalan Raya PLP Curug, Legok, Tangerang",
+              hintText: "Klik 'Cek Lokasi' untuk mendapatkan alamat",
               hintStyle: GoogleFonts.inter(color: const Color(0xFF5C5878), fontSize: 12),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -979,16 +997,16 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
     );
   }
 
-  Widget _buildCheckButton() {
+  Widget _buildLocationButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: _isCalculating ? null : _checkLocationAndRoute,
-        icon: _isCalculating
+        onPressed: _isGettingLocation ? null : _handleGetLocation,
+        icon: _isGettingLocation
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.route, size: 18),
+            : const Icon(Icons.my_location, size: 18),
         label: Text(
-          _isCalculating ? "Memproses..." : "Cek Ongkir & Tampilkan Rute",
+          _isGettingLocation ? "Mendapatkan lokasi..." : "📍 Cek Lokasi & Tampilkan Rute",
           style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
@@ -1001,31 +1019,6 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
   }
 
   Widget _buildMapCard() {
-    if (_userLocation == null || _routePoints.isEmpty) {
-      return Container(
-        height: 280,
-        decoration: BoxDecoration(
-          color: const Color(0xFF16162A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1E1E35), width: 1),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.map_outlined, color: Color(0xFF5C5878), size: 48),
-              const SizedBox(height: 12),
-              Text(
-                "Masukkan alamat dan klik 'Cek Ongkir & Rute'",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(color: const Color(0xFF9B97B8), fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Container(
       height: 320,
       decoration: BoxDecoration(
@@ -1037,7 +1030,7 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
         child: FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: _userLocation!,
+            initialCenter: _userLocation ?? _storeLocation,
             initialZoom: 15.0,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all,
@@ -1049,9 +1042,9 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
               userAgentPackageName: "com.kanzza.sales.app",
               tileProvider: NetworkTileProvider(),
             ),
+            // Store Marker
             MarkerLayer(
               markers: [
-                // Store Marker - Orange
                 Marker(
                   width: 45,
                   height: 45,
@@ -1071,28 +1064,30 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
                     child: const Icon(Icons.store, color: Colors.white, size: 24),
                   ),
                 ),
-                // User Marker - Red
-                Marker(
-                  width: 45,
-                  height: 45,
-                  point: _userLocation!,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade500,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                // User Marker
+                if (_userLocation != null)
+                  Marker(
+                    width: 45,
+                    height: 45,
+                    point: _userLocation!,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade500,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.location_on, color: Colors.white, size: 24),
                     ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 24),
                   ),
-                ),
               ],
             ),
+            // Route Polyline
             if (_routePoints.isNotEmpty && _routePoints.length > 1)
               PolylineLayer(
                 polylines: [
@@ -1160,7 +1155,7 @@ class _CustomerCheckoutPageState extends State<CustomerCheckoutPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Rute mengikuti jalur jalan raya. Ongkir dihitung berdasarkan jarak tempuh sebenarnya.",
+                    "Lokasi diambil dari GPS perangkat Anda. Rute mengikuti jalur jalan raya.",
                     style: GoogleFonts.inter(color: const Color(0xFF9B97B8), fontSize: 11),
                   ),
                 ),
