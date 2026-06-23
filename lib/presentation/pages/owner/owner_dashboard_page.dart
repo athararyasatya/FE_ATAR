@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+import 'package:kanzza_sales_app_fe/core/theme/theme_provider.dart';
+import 'package:kanzza_sales_app_fe/core/widgets/theme_toggle_button.dart';
 import 'package:kanzza_sales_app_fe/routes.dart';
 
 // ⬇️ IMPORT HALAMAN ⬇️
@@ -20,7 +23,34 @@ class OwnerDashboardPage extends StatefulWidget {
 
 class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   int _selectedPeriod = 0;
-
+  int _selectedChartTab = 0;
+  
+  // ==================== DATA DUMMY ====================
+  final List<double> _weeklySales = [2.5, 3.8, 4.2, 6.1, 5.5, 8.0, 7.2];
+  final List<String> _weekDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  
+  final List<Map<String, dynamic>> _topCategories = [
+    {'name': 'Snack', 'value': 35, 'color': const Color(0xFF9B5EFF)},
+    {'name': 'Minuman', 'value': 25, 'color': const Color(0xFF4CAF50)},
+    {'name': 'Frozen', 'value': 20, 'color': const Color(0xFFFF9800)},
+    {'name': 'Sembako', 'value': 12, 'color': const Color(0xFF2196F3)},
+    {'name': 'Instan', 'value': 8, 'color': const Color(0xFFFF5252)},
+  ];
+  
+  final List<Map<String, dynamic>> _topProducts = [
+    {'name': 'Keripik Singkong', 'sales': 145, 'revenue': 2175000.0, 'trend': '+12%'},
+    {'name': 'Air Mineral 600ml', 'sales': 120, 'revenue': 480000.0, 'trend': '+8%'},
+    {'name': 'Beras Premium 5kg', 'sales': 45, 'revenue': 2925000.0, 'trend': '+15%'},
+    {'name': 'Es Krim Coklat', 'sales': 30, 'revenue': 360000.0, 'trend': '-3%'},
+    {'name': 'Mie Instan Goreng', 'sales': 25, 'revenue': 87500.0, 'trend': '+5%'},
+  ];
+  
+  final List<Map<String, dynamic>> _lowStockProducts = [
+    {'name': 'Beras Premium 5kg', 'stock': 3, 'threshold': 10},
+    {'name': 'Es Krim Vanila', 'stock': 5, 'threshold': 10},
+    {'name': 'Keripik Singkong Balado', 'stock': 8, 'threshold': 15},
+  ];
+  
   final List<Map<String, dynamic>> _recentOrders = [
     {
       'id': 'INV-2025-001',
@@ -29,7 +59,6 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
       'status': 'Diproses',
       'statusColor': const Color(0xFFFF9B5EFF),
       'date': '15 Jun 2025',
-      'items': 2,
     },
     {
       'id': 'INV-2025-002',
@@ -38,7 +67,6 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
       'status': 'Dikirim',
       'statusColor': const Color(0xFF4CAF50),
       'date': '14 Jun 2025',
-      'items': 3,
     },
     {
       'id': 'INV-2025-003',
@@ -47,16 +75,6 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
       'status': 'Selesai',
       'statusColor': const Color(0xFF2196F3),
       'date': '13 Jun 2025',
-      'items': 2,
-    },
-    {
-      'id': 'INV-2025-004',
-      'customer': 'Dewi Lestari',
-      'total': 15000,
-      'status': 'Dibatalkan',
-      'statusColor': const Color(0xFFFF5252),
-      'date': '12 Jun 2025',
-      'items': 1,
     },
   ];
 
@@ -70,7 +88,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     },
     {
       'title': 'Laporan Penjualan',
-      'subtitle': 'Lihat laporan dan analisis',
+      'subtitle': 'Lihat laporan & analisis',
       'icon': Icons.assessment_outlined,
       'color': const Color(0xFF4CAF50),
       'page': const OwnerReportsPage(),
@@ -84,195 +102,318 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     },
   ];
 
+  Map<String, dynamic> get _kpiData {
+    return {
+      'totalRevenue': 1234500.0,
+      'totalOrders': 45,
+      'totalCustomers': 128,
+      'totalProducts': 67,
+      'averageOrderValue': 1234500.0 / 45,
+      'retentionRate': 0.78,
+      'inventoryTurnover': 4.5,
+    };
+  }
+
   void _logout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF16162A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF1E1E35)),
-        ),
-        title: Text(
-          "Konfirmasi Logout",
-          style: GoogleFonts.poppins(color: const Color(0xFFF0EAFF), fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          "Apakah Anda yakin ingin keluar?",
-          style: GoogleFonts.inter(color: const Color(0xFF9B97B8)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Batal", style: GoogleFonts.inter(color: const Color(0xFF9B97B8))),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.login,
-                (route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    "Berhasil logout",
-                    style: GoogleFonts.inter(color: Colors.white),
-                  ),
-                  backgroundColor: Colors.green.shade400,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+        
+        return AlertDialog(
+          backgroundColor: theme.cardTheme.color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
             ),
-            child: Text("Logout", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
           ),
-        ],
+          title: Text(
+            "Konfirmasi Logout",
+            style: GoogleFonts.poppins(
+              color: theme.textTheme.titleLarge?.color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            "Apakah Anda yakin ingin keluar?",
+            style: GoogleFonts.inter(
+              color: theme.textTheme.bodyMedium?.color,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Batal",
+                style: GoogleFonts.inter(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.login,
+                  (route) => false,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Berhasil logout",
+                      style: GoogleFonts.inter(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.green.shade400,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                "Logout",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _formatPrice(num price) {
+    return price.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+  }
+
+  String _formatCurrency(double value) {
+    if (value >= 1000000) {
+      return 'Rp ${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return 'Rp ${(value / 1000).toStringAsFixed(0)}K';
+    }
+    return 'Rp ${_formatPrice(value)}';
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
     final sw = MediaQuery.of(context).size.width;
     final hPad = sw * 0.04;
     final isTablet = sw > 600;
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    SystemChrome.setSystemUIOverlayStyle(
+      isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF13102A), Color(0xFF0D0D12)],
+            colors: isDark
+                ? [const Color(0xFF13102A), const Color(0xFF0D0D12)]
+                : [const Color(0xFFF5F5FA), const Color(0xFFE8E8F0)],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header - TANPA ICON BACK
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
-                child: Row(
+        child: Column(
+          children: [
+            _buildHeader(isDark, isTablet, hPad),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // HAPUS GestureDetector back button
-                    // const SizedBox(width: 12), // HAPUS JUGA
-                    Expanded(
-                      child: Text(
-                        "Dashboard Owner",
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFF0EAFF),
-                          fontSize: isTablet ? 26 : 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        // Notification Button
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF16162A),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
-                          ),
-                          child: Stack(
-                            children: [
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.notifications_outlined, color: Color(0xFF9B97B8), size: 22),
-                                padding: EdgeInsets.zero,
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFF5252),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Logout Button
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade400.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.shade400.withOpacity(0.3)),
-                          ),
-                          child: IconButton(
-                            onPressed: _logout,
-                            icon: Icon(Icons.logout, color: Colors.red.shade400, size: 22),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildWelcomeSection(isTablet, isDark),
+                    const SizedBox(height: 20),
+                    _buildPeriodSelector(isDark),
+                    const SizedBox(height: 16),
+                    _buildKPICards(isTablet, isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Analisis Data Penjualan", isDark),
+                    const SizedBox(height: 12),
+                    _buildChartTabs(isDark),
+                    const SizedBox(height: 12),
+                    _buildChartContent(isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Top 5 Produk Terlaris", isDark),
+                    const SizedBox(height: 12),
+                    _buildTopProducts(isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("⚠️ Alert Stok Menipis", isDark),
+                    const SizedBox(height: 12),
+                    _buildLowStockAlert(isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Menu Manajemen", isDark),
+                    const SizedBox(height: 12),
+                    _buildMenuGrid(isTablet, isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Pesanan Terbaru", isDark),
+                    const SizedBox(height: 12),
+                    _buildRecentOrders(isDark),
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
-
-              // Content - Expanded dengan SingleChildScrollView
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildWelcomeSection(isTablet),
-                      const SizedBox(height: 20),
-                      _buildPeriodSelector(),
-                      const SizedBox(height: 16),
-                      _buildStatsCards(isTablet),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Menu Manajemen"),
-                      const SizedBox(height: 12),
-                      _buildMenuGrid(isTablet),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Insight & Rekomendasi"),
-                      const SizedBox(height: 12),
-                      _buildInsightCard(),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Grafik Penjualan"),
-                      const SizedBox(height: 12),
-                      _buildSalesChart(),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("Pesanan Terbaru"),
-                      const SizedBox(height: 12),
-                      _buildRecentOrders(),
-                      const SizedBox(height: 30),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildWelcomeSection(bool isTablet) {
+
+// Header menjadi:
+Widget _buildHeader(bool isDark, bool isTablet, double hPad) {
+  return Container(
+    padding: EdgeInsets.only(
+      left: hPad,
+      right: hPad,
+      top: MediaQuery.of(context).padding.top + 16,
+      bottom: 16,
+    ),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF13102A) : Colors.white,
+      boxShadow: [
+        BoxShadow(
+          color: isDark ? Colors.black12 : Colors.black12,
+          blurRadius: isDark ? 0 : 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+      border: isDark
+          ? const Border(bottom: BorderSide(color: Color(0xFF1E1E35)))
+          : null,
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            "Dashboard Owner",
+            style: GoogleFonts.poppins(
+              color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
+              fontSize: isTablet ? 26 : 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            // HAPUS Container download_outlined di sini
+            const ThemeToggleButton(),
+            const SizedBox(width: 8),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF16162A) : const Color(0xFFF5F5FA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
+                ),
+              ),
+              child: Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {},
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF4B5563),
+                      size: 22,
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF5252),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.red.shade400.withOpacity(0.15)
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.red.shade400.withOpacity(0.3)
+                      : Colors.red.shade200,
+                ),
+              ),
+              child: IconButton(
+                onPressed: _logout,
+                icon: Icon(
+                  Icons.logout,
+                  color: isDark ? Colors.red.shade400 : Colors.red.shade400,
+                  size: 22,
+                ),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _buildWelcomeSection(bool isTablet, bool isDark) {
+    final kpi = _kpiData;
+    
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 16),
       decoration: BoxDecoration(
@@ -282,6 +423,13 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           colors: [Color(0xFF9B5EFF), Color(0xFF6C3BD8)],
         ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9B5EFF).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -299,7 +447,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Total pendapatan hari ini: Rp 1.234.500",
+                  "Total pendapatan hari ini: ${_formatCurrency(kpi['totalRevenue'])}",
                   style: GoogleFonts.inter(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: isTablet ? 16 : 13,
@@ -307,12 +455,26 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 ),
                 if (isTablet) ...[
                   const SizedBox(height: 8),
-                  Text(
-                    "📈 Naik 12.5% dari kemarin | 🎯 Target: Rp 2.000.000",
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 13,
-                    ),
+                  Row(
+                    children: [
+                      _buildWelcomeBadge(
+                        Icons.trending_up,
+                        "Naik 12.5%",
+                        Colors.green,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildWelcomeBadge(
+                        Icons.people,
+                        "${kpi['totalCustomers']} pelanggan",
+                        Colors.blue,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildWelcomeBadge(
+                        Icons.shopping_bag,
+                        "${kpi['totalOrders']} pesanan",
+                        Colors.orange,
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -325,14 +487,42 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.analytics, color: Colors.white, size: isTablet ? 32 : 24),
+            child: Icon(
+              Icons.analytics,
+              color: Colors.white,
+              size: isTablet ? 32 : 24,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPeriodSelector() {
+  Widget _buildWelcomeBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector(bool isDark) {
     final periods = ["Hari Ini", "Minggu Ini", "Bulan Ini"];
     return Row(
       children: periods.asMap().entries.map((entry) {
@@ -346,17 +536,29 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF9B5EFF) : const Color(0xFF16162A),
+                color: isSelected
+                    ? const Color(0xFF9B5EFF)
+                    : isDark
+                        ? const Color(0xFF16162A)
+                        : Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF9B5EFF) : const Color(0xFF1E1E35),
+                  color: isSelected
+                      ? const Color(0xFF9B5EFF)
+                      : isDark
+                          ? const Color(0xFF1E1E35)
+                          : const Color(0xFFE5E7EB),
                 ),
               ),
               child: Center(
                 child: Text(
                   label,
                   style: GoogleFonts.inter(
-                    color: isSelected ? Colors.white : const Color(0xFF9B97B8),
+                    color: isSelected
+                        ? Colors.white
+                        : isDark
+                            ? const Color(0xFF9B97B8)
+                            : const Color(0xFF6B7280),
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -369,35 +571,38 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     );
   }
 
-  Widget _buildStatsCards(bool isTablet) {
-    final stats = [
+  Widget _buildKPICards(bool isTablet, bool isDark) {
+    final theme = Theme.of(context);
+    final kpi = _kpiData;
+    
+    final kpiCards = [
       {
-        'title': 'Pendapatan',
-        'value': 'Rp 1.234.500',
+        'title': 'Total Revenue',
+        'value': _formatCurrency(kpi['totalRevenue']),
         'icon': Icons.attach_money,
         'color': const Color(0xFF4CAF50),
-        'change': '+12.5%',
+        'subtitle': '${kpi['totalOrders']} pesanan',
       },
       {
-        'title': 'Pesanan',
-        'value': '45',
-        'icon': Icons.shopping_bag_outlined,
+        'title': 'Average Order',
+        'value': _formatCurrency(kpi['averageOrderValue']),
+        'icon': Icons.shopping_cart_outlined,
         'color': const Color(0xFF9B5EFF),
-        'change': '+8.3%',
+        'subtitle': 'Rp ${_formatPrice(kpi['averageOrderValue'])}',
       },
       {
-        'title': 'Pelanggan',
-        'value': '128',
+        'title': 'Customer Retention',
+        'value': '${(kpi['retentionRate'] * 100).toInt()}%',
         'icon': Icons.people_outline,
         'color': const Color(0xFF2196F3),
-        'change': '+5.2%',
+        'subtitle': '${kpi['totalCustomers']} pelanggan',
       },
       {
-        'title': 'Produk',
-        'value': '67',
+        'title': 'Inventory Turnover',
+        'value': kpi['inventoryTurnover'].toStringAsFixed(1),
         'icon': Icons.inventory_2_outlined,
         'color': const Color(0xFFFF9800),
-        'change': '-2.1%',
+        'subtitle': '${kpi['totalProducts']} produk',
       },
     ];
 
@@ -410,21 +615,26 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         mainAxisSpacing: 10,
         childAspectRatio: 1.3,
       ),
-      itemCount: stats.length,
+      itemCount: kpiCards.length,
       itemBuilder: (context, index) {
-        final stat = stats[index];
-        final color = stat['color'] as Color;
-        final icon = stat['icon'] as IconData;
-        final change = stat['change'] as String;
-        final title = stat['title'] as String;
-        final value = stat['value'] as String;
+        final card = kpiCards[index];
+        final color = card['color'] as Color;
         
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF16162A),
+            color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+            border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,25 +647,25 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, color: color, size: 18),
+                    child: Icon(card['icon'] as IconData, color: color, size: 18),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: change.startsWith('+')
+                      color: index % 2 == 0
                           ? Colors.green.withOpacity(0.15)
-                          : Colors.red.withOpacity(0.15),
+                          : Colors.orange.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      change,
+                      index % 2 == 0 ? '📈 +${12 - index * 3}%' : '📊 ${index * 2}x',
                       style: GoogleFonts.inter(
-                        color: change.startsWith('+')
+                        color: index % 2 == 0
                             ? Colors.green.shade400
-                            : Colors.red.shade400,
+                            : Colors.orange.shade400,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                       ),
@@ -467,18 +677,25 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    card['title'] as String,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF9B97B8),
+                      color: theme.textTheme.bodySmall?.color,
                       fontSize: 10,
                     ),
                   ),
                   Text(
-                    value,
+                    card['value'] as String,
                     style: GoogleFonts.poppins(
-                      color: const Color(0xFFF0EAFF),
-                      fontSize: 15,
+                      color: theme.textTheme.titleLarge?.color,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    card['subtitle'] as String,
+                    style: GoogleFonts.inter(
+                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 9,
                     ),
                   ),
                 ],
@@ -490,18 +707,663 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildChartTabs(bool isDark) {
+    final tabs = ['Penjualan', 'Kategori', 'Pelanggan'];
+    
+    return Row(
+      children: tabs.asMap().entries.map((entry) {
+        final index = entry.key;
+        final label = entry.value;
+        final isSelected = _selectedChartTab == index;
+        
+        return GestureDetector(
+          onTap: () => setState(() => _selectedChartTab = index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF9B5EFF)
+                  : isDark
+                      ? const Color(0xFF16162A)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFF9B5EFF)
+                    : isDark
+                        ? const Color(0xFF1E1E35)
+                        : const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                color: isSelected ? Colors.white : (isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280)),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildChartContent(bool isDark) {
+    switch (_selectedChartTab) {
+      case 0:
+        return _buildSalesChart(isDark);
+      case 1:
+        return _buildCategoryChart(isDark);
+      case 2:
+        return _buildCustomerChart(isDark);
+      default:
+        return _buildSalesChart(isDark);
+    }
+  }
+
+  Widget _buildSalesChart(bool isDark) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "💰 Tren Penjualan (Rp Juta)",
+                style: GoogleFonts.inter(
+                  color: theme.textTheme.bodySmall?.color,
+                  fontSize: 11,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "📈 +12.5%",
+                  style: GoogleFonts.inter(
+                    color: Colors.green.shade400,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 2,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE5E7EB),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 26,
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() < _weekDays.length) {
+                          return Text(
+                            _weekDays[value.toInt()],
+                            style: GoogleFonts.inter(
+                              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+                              fontSize: 10,
+                            ),
+                          );
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: GoogleFonts.inter(
+                            color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: _weeklySales.asMap().entries.map((e) => 
+                      FlSpot(e.key.toDouble(), e.value)
+                    ).toList(),
+                    isCurved: true,
+                    color: const Color(0xFF9B5EFF),
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: const Color(0xFF9B5EFF).withOpacity(0.15),
+                    ),
+                  ),
+                ],
+                minX: 0,
+                maxX: 6,
+                minY: 0,
+                maxY: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChart(bool isDark) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: PieChart(
+              PieChartData(
+                sections: _topCategories.map((category) {
+                  return PieChartSectionData(
+                    color: category['color'] as Color,
+                    value: (category['value'] as int).toDouble(),
+                    title: '',
+                    radius: 60,
+                  );
+                }).toList(),
+                sectionsSpace: 2,
+                centerSpaceRadius: 30,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 1,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _topCategories.map((category) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: category['color'] as Color,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          category['name'] as String,
+                          style: GoogleFonts.inter(
+                            color: theme.textTheme.bodyMedium?.color,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${category['value']}%',
+                        style: GoogleFonts.inter(
+                          color: theme.textTheme.titleLarge?.color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerChart(bool isDark) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "👥 Pelanggan Baru (7 Hari Terakhir)",
+                style: GoogleFonts.inter(
+                  color: theme.textTheme.bodySmall?.color,
+                  fontSize: 11,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "📊 +5.2%",
+                  style: GoogleFonts.inter(
+                    color: Colors.blue.shade400,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE5E7EB),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 26,
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() < _weekDays.length) {
+                          return Text(
+                            _weekDays[value.toInt()],
+                            style: GoogleFonts.inter(
+                              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+                              fontSize: 10,
+                            ),
+                          );
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: GoogleFonts.inter(
+                            color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+                            fontSize: 9,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: _weeklySales.asMap().entries.map((e) {
+                  return BarChartGroupData(
+                    x: e.key,
+                    barRods: [
+                      BarChartRodData(
+                        toY: e.value * 0.5,
+                        color: const Color(0xFF9B5EFF),
+                        width: 12,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopProducts(bool isDark) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Column(
+        children: _topProducts.asMap().entries.map((entry) {
+          final index = entry.key;
+          final product = entry.value;
+          final isFirst = index == 0;
+          
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
+                  width: index < _topProducts.length - 1 ? 1 : 0,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isFirst
+                        ? const Color(0xFFFFD700).withOpacity(0.2)
+                        : isDark
+                            ? const Color(0xFF1E1E35)
+                            : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: GoogleFonts.inter(
+                        color: isFirst
+                            ? const Color(0xFFFFD700)
+                            : theme.textTheme.bodySmall?.color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product['name'] as String,
+                        style: GoogleFonts.inter(
+                          color: theme.textTheme.titleLarge?.color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            '${product['sales']} terjual',
+                            style: GoogleFonts.inter(
+                              color: theme.textTheme.bodySmall?.color,
+                              fontSize: 10,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: (product['trend'] as String).startsWith('+')
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              product['trend'] as String,
+                              style: GoogleFonts.inter(
+                                color: (product['trend'] as String).startsWith('+')
+                                    ? Colors.green.shade400
+                                    : Colors.red.shade400,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _formatCurrency(product['revenue'] as double),
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF9B5EFF),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildLowStockAlert(bool isDark) {
+    final theme = Theme.of(context);
+    
+    if (_lowStockProducts.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.green.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 12),
+            Text(
+              "✅ Semua stok aman!",
+              style: GoogleFonts.inter(
+                color: Colors.green,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.red.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        children: _lowStockProducts.map((product) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
+                  width: product != _lowStockProducts.last ? 1 : 0,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber,
+                    color: Colors.red,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    product['name'] as String,
+                    style: GoogleFonts.inter(
+                      color: theme.textTheme.titleLarge?.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Sisa ${product['stock']} unit',
+                    style: GoogleFonts.inter(
+                      color: Colors.red.shade400,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    _showSnackBar("📦 Restock ${product['name']} segera!", Colors.orange);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9B5EFF),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      "Restock",
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, bool isDark) {
+    final theme = Theme.of(context);
     return Text(
       title,
       style: GoogleFonts.poppins(
-        color: const Color(0xFFF0EAFF),
+        color: theme.textTheme.titleLarge?.color,
         fontSize: 16,
         fontWeight: FontWeight.w600,
       ),
     );
   }
 
-  Widget _buildMenuGrid(bool isTablet) {
+  Widget _buildMenuGrid(bool isTablet, bool isDark) {
+    final theme = Theme.of(context);
+    
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -509,7 +1371,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         crossAxisCount: isTablet ? 3 : 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 1.2,
+        childAspectRatio: 1.1,
       ),
       itemCount: _menuItems.length,
       itemBuilder: (context, index) {
@@ -528,30 +1390,39 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             );
           },
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF16162A),
+              color: theme.cardTheme.color,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+              border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 22),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   title,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFFF0EAFF),
-                    fontSize: 13,
+                    color: theme.textTheme.titleLarge?.color,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
@@ -562,11 +1433,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF9B97B8),
-                    fontSize: 10,
+                    color: theme.textTheme.bodySmall?.color,
+                    fontSize: 9,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -577,250 +1448,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     );
   }
 
-  Widget _buildInsightCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF9B5EFF).withOpacity(0.15),
-            const Color(0xFF6C3BD8).withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFF9B5EFF).withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF9B5EFF).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.lightbulb_outline,
-                  color: Color(0xFF9B5EFF),
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Data-Driven Decision Making",
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFFF0EAFF),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildInsightItem(
-            icon: Icons.trending_up,
-            color: Colors.green,
-            title: "Peningkatan Penjualan",
-            description: "Penjualan naik 12.5% dalam 7 hari. Produk terlaris: Keripik Singkong.",
-          ),
-          const SizedBox(height: 6),
-          _buildInsightItem(
-            icon: Icons.warning_amber,
-            color: Colors.orange,
-            title: "Stok Menipis",
-            description: "Beras Premium 5kg tersisa 3 unit. Segera restock!",
-          ),
-          const SizedBox(height: 6),
-          _buildInsightItem(
-            icon: Icons.people,
-            color: Colors.blue,
-            title: "Pelanggan Baru",
-            description: "5 pelanggan baru hari ini. Total: 128 pelanggan aktif.",
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF9B5EFF).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: const Color(0xFF9B5EFF).withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: Color(0xFF9B5EFF),
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "🎯 Rekomendasi: Tingkatkan stok produk unggulan & optimalkan promosi.",
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFF0EAFF),
-                      fontSize: 11,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInsightItem({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String description,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 2),
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(icon, color: color, size: 14),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFF0EAFF),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                description,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFF9B97B8),
-                  fontSize: 10,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSalesChart() {
-    return Container(
-      height: 180,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E1E35), width: 1),
-      ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 1,
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: const Color(0xFF1E1E35),
-                strokeWidth: 1,
-              );
-            },
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 26,
-                getTitlesWidget: (value, meta) {
-                  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-                  if (value.toInt() < days.length) {
-                    return Text(
-                      days[value.toInt()],
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF9B97B8),
-                        fontSize: 10,
-                      ),
-                    );
-                  }
-                  return const Text('');
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 32,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF9B97B8),
-                      fontSize: 10,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 2),
-                FlSpot(1, 4),
-                FlSpot(2, 3),
-                FlSpot(3, 7),
-                FlSpot(4, 5),
-                FlSpot(5, 9),
-                FlSpot(6, 6),
-              ],
-              isCurved: true,
-              color: const Color(0xFF9B5EFF),
-              barWidth: 3,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                color: const Color(0xFF9B5EFF).withOpacity(0.15),
-              ),
-            ),
-          ],
-          minX: 0,
-          maxX: 6,
-          minY: 0,
-          maxY: 10,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentOrders() {
+  Widget _buildRecentOrders(bool isDark) {
+    final theme = Theme.of(context);
+    
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -830,13 +1460,28 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         final statusColor = order['statusColor'] as Color;
         final total = order['total'] as int;
         
+        // Cast dengan aman
+        final String id = order['id']?.toString() ?? '';
+        final String status = order['status']?.toString() ?? '';
+        final String customer = order['customer']?.toString() ?? '';
+        final String date = order['date']?.toString() ?? '';
+        
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF16162A),
+            color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+            border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
@@ -847,9 +1492,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     Row(
                       children: [
                         Text(
-                          order['id'],
+                          id,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFFF0EAFF),
+                            color: theme.textTheme.titleLarge?.color,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -865,7 +1510,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                             ),
                           ),
                           child: Text(
-                            order['status'],
+                            status,
                             style: GoogleFonts.inter(
                               color: statusColor,
                               fontSize: 9,
@@ -877,9 +1522,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      order['customer'],
+                      customer,
                       style: GoogleFonts.inter(
-                        color: const Color(0xFF9B97B8),
+                        color: theme.textTheme.bodyMedium?.color,
                         fontSize: 11,
                       ),
                     ),
@@ -898,9 +1543,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     ),
                   ),
                   Text(
-                    order['date'],
+                    date,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF5C5878),
+                      color: theme.textTheme.bodySmall?.color,
                       fontSize: 10,
                     ),
                   ),
@@ -910,13 +1555,6 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           ),
         );
       },
-    );
-  }
-
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
     );
   }
 }

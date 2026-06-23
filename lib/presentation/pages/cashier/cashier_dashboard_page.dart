@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:kanzza_sales_app_fe/core/theme/theme_provider.dart';
+import 'package:kanzza_sales_app_fe/core/widgets/theme_toggle_button.dart';
 import 'package:kanzza_sales_app_fe/routes.dart';
 
 class CashierDashboardPage extends StatefulWidget {
@@ -13,7 +16,6 @@ class CashierDashboardPage extends StatefulWidget {
 }
 
 class _CashierDashboardPageState extends State<CashierDashboardPage> {
-  // Statistik dummy
   final Map<String, dynamic> _stats = {
     'online': {
       'count': 45,
@@ -94,212 +96,282 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
       'route': AppRoutes.offlineTransaction,
     },
     {
-      'title': 'Transaksi Online',
-      'subtitle': 'Buat transaksi online',
-      'icon': Icons.wifi,
-      'color': const Color(0xFF9B5EFF),
-      'route': AppRoutes.cashierTransaction,
-    },
-    {
       'title': 'Daftar Produk',
-      'subtitle': 'Lihat dan kelola produk',
+      'subtitle': 'Lihat produk',
       'icon': Icons.inventory_2_outlined,
       'color': const Color(0xFF4CAF50),
       'route': AppRoutes.cashierProducts,
     },
     {
-      'title': 'Riwayat Offline',
-      'subtitle': 'Lihat transaksi offline',
+      'title': 'Kelola Produk',
+      'subtitle': 'Tambah & kelola',
+      'icon': Icons.edit_note,
+      'color': const Color(0xFF2196F3),
+      'route': AppRoutes.manageProducts,
+    },
+    {
+      'title': 'Riwayat',
+      'subtitle': 'Lihat transaksi',
       'icon': Icons.history,
-      'color': const Color(0xFFFF9800),
-      'route': '/cashier-history', // ⬅️ Nanti tambahkan di routes.dart
+      'color': const Color(0xFF9B5EFF),
+      'route': AppRoutes.transactionHistory,
     },
   ];
 
   void _logout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF16162A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF1E1E35)),
-        ),
-        title: Text(
-          "Konfirmasi Logout",
-          style: GoogleFonts.poppins(color: const Color(0xFFF0EAFF), fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          "Apakah Anda yakin ingin keluar?",
-          style: GoogleFonts.inter(color: const Color(0xFF9B97B8)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Batal", style: GoogleFonts.inter(color: const Color(0xFF9B97B8))),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.login,
-                (route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    "Berhasil logout",
-                    style: GoogleFonts.inter(color: Colors.white),
-                  ),
-                  backgroundColor: Colors.green.shade400,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+        
+        return AlertDialog(
+          backgroundColor: theme.cardTheme.color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
             ),
-            child: Text("Logout", style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
           ),
-        ],
-      ),
+          title: Text(
+            "Konfirmasi Logout",
+            style: GoogleFonts.poppins(
+              color: theme.textTheme.titleLarge?.color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            "Apakah Anda yakin ingin keluar?",
+            style: GoogleFonts.inter(
+              color: theme.textTheme.bodyMedium?.color,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Batal",
+                style: GoogleFonts.inter(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.login,
+                  (route) => false,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Berhasil logout",
+                      style: GoogleFonts.inter(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.green.shade400,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                "Logout",
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
     final sw = MediaQuery.of(context).size.width;
     final hPad = sw * 0.04;
     final isTablet = sw > 600;
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    SystemChrome.setSystemUIOverlayStyle(
+      isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF13102A), Color(0xFF0D0D12)],
+            colors: isDark
+                ? [const Color(0xFF13102A), const Color(0xFF0D0D12)]
+                : [const Color(0xFFF5F5FA), const Color(0xFFE8E8F0)],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header - TANPA ICON BACK
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "Dashboard Kasir",
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFF0EAFF),
-                          fontSize: isTablet ? 26 : 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.only(
+                left: hPad,
+                right: hPad,
+                top: MediaQuery.of(context).padding.top + 16,
+                bottom: 16,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF13102A) : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black12 : Colors.black12,
+                    blurRadius: isDark ? 0 : 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                border: isDark
+                    ? const Border(bottom: BorderSide(color: Color(0xFF1E1E35)))
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      "Dashboard Kasir",
+                      style: GoogleFonts.poppins(
+                        color: isDark
+                            ? const Color(0xFFF0EAFF)
+                            : const Color(0xFF1F2937),
+                        fontSize: isTablet ? 26 : 20,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Row(
-                      children: [
-                        // Notification Button
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF16162A),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+                  ),
+                  Row(
+                    children: [
+                      const ThemeToggleButton(),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF16162A)
+                              : const Color(0xFFF5F5FA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E1E35)
+                                : const Color(0xFFE8E8F0),
+                            width: 1,
                           ),
-                          child: Stack(
-                            children: [
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.notifications_outlined, color: Color(0xFF9B97B8), size: 22),
-                                padding: EdgeInsets.zero,
+                        ),
+                        child: Stack(
+                          children: [
+                            IconButton(
+                              onPressed: () {},
+                              icon: Icon(
+                                Icons.notifications_outlined,
+                                color: isDark
+                                    ? const Color(0xFF9B97B8)
+                                    : const Color(0xFF4B5563),
+                                size: 22,
                               ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFF5252),
-                                    shape: BoxShape.circle,
-                                  ),
+                              padding: EdgeInsets.zero,
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFF5252),
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.red.shade400.withOpacity(0.15)
+                              : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.red.shade400.withOpacity(0.3)
+                                : Colors.red.shade200,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // Logout Button
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade400.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.shade400.withOpacity(0.3)),
+                        child: IconButton(
+                          onPressed: _logout,
+                          icon: Icon(
+                            Icons.logout,
+                            color: isDark ? Colors.red.shade400 : Colors.red.shade400,
+                            size: 22,
                           ),
-                          child: IconButton(
-                            onPressed: _logout,
-                            icon: Icon(Icons.logout, color: Colors.red.shade400, size: 22),
-                            padding: EdgeInsets.zero,
-                          ),
+                          padding: EdgeInsets.zero,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildWelcomeSection(isTablet, isDark),
+                    const SizedBox(height: 24),
+                    _buildStatsCards(isTablet, isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Aksi Cepat", isDark),
+                    const SizedBox(height: 12),
+                    _buildMenuGrid(isTablet, isDark),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle("Transaksi Terbaru", isDark),
+                    const SizedBox(height: 12),
+                    _buildRecentTransactions(isDark),
+                    const SizedBox(height: 30),
                   ],
                 ),
               ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Welcome Section
-                      _buildWelcomeSection(isTablet),
-                      const SizedBox(height: 24),
-
-                      // Stats Cards - Online & Offline
-                      _buildStatsCards(isTablet),
-                      const SizedBox(height: 24),
-
-                      // Quick Actions Menu
-                      _buildSectionTitle("Aksi Cepat"),
-                      const SizedBox(height: 12),
-                      _buildMenuGrid(isTablet),
-                      const SizedBox(height: 24),
-
-                      // Recent Transactions
-                      _buildSectionTitle("Transaksi Terbaru"),
-                      const SizedBox(height: 12),
-                      _buildRecentTransactions(),
-                      const SizedBox(height: 30),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildWelcomeSection(bool isTablet) {
+  Widget _buildWelcomeSection(bool isTablet, bool isDark) {
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 16),
       decoration: BoxDecoration(
@@ -309,6 +381,13 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
           colors: [Color(0xFF9B5EFF), Color(0xFF6C3BD8)],
         ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9B5EFF).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -352,17 +431,22 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.point_of_sale, color: Colors.white, size: isTablet ? 32 : 24),
+            child: Icon(
+              Icons.point_of_sale,
+              color: Colors.white,
+              size: isTablet ? 32 : 24,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsCards(bool isTablet) {
+  Widget _buildStatsCards(bool isTablet, bool isDark) {
     final online = _stats['online'];
     final offline = _stats['offline'];
-    
+    final theme = Theme.of(context);
+
     final stats = [
       {
         'title': 'Online',
@@ -416,13 +500,22 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
         final value = stat['value'] as String;
         final subValue = stat['subValue'] as String;
         final today = stat['today'] as String;
-        
+
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF16162A),
+            color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+            border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +528,7 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(icon, color: color, size: 18),
@@ -443,9 +536,9 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: color.withOpacity(0.3)),
+                      border: Border.all(color: color.withOpacity(0.2)),
                     ),
                     child: Text(
                       today,
@@ -464,14 +557,14 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                   Text(
                     title,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF9B97B8),
+                      color: theme.textTheme.bodySmall?.color,
                       fontSize: 10,
                     ),
                   ),
                   Text(
                     value,
                     style: GoogleFonts.poppins(
-                      color: const Color(0xFFF0EAFF),
+                      color: theme.textTheme.titleLarge?.color,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -479,7 +572,7 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                   Text(
                     subValue,
                     style: GoogleFonts.inter(
-                      color: const Color(0xFF9B97B8),
+                      color: theme.textTheme.bodySmall?.color,
                       fontSize: 9,
                     ),
                   ),
@@ -492,18 +585,21 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDark) {
+    final theme = Theme.of(context);
     return Text(
       title,
       style: GoogleFonts.poppins(
-        color: const Color(0xFFF0EAFF),
+        color: theme.textTheme.titleLarge?.color,
         fontSize: 16,
         fontWeight: FontWeight.w600,
       ),
     );
   }
 
-  Widget _buildMenuGrid(bool isTablet) {
+  Widget _buildMenuGrid(bool isTablet, bool isDark) {
+    final theme = Theme.of(context);
+    
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -511,7 +607,7 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
         crossAxisCount: isTablet ? 4 : 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 1.2,
+        childAspectRatio: 1.1, // DIPERBAIKI: dari 1.2 menjadi 1.1
       ),
       itemCount: _menuItems.length,
       itemBuilder: (context, index) {
@@ -527,30 +623,39 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
             Navigator.pushNamed(context, route);
           },
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12), // DIPERBAIKI: dari 14 menjadi 12
             decoration: BoxDecoration(
-              color: const Color(0xFF16162A),
+              color: theme.cardTheme.color,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+              border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 44, // DIPERBAIKI: dari 48 menjadi 44
+                  height: 44, // DIPERBAIKI: dari 48 menjadi 44
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 22), // DIPERBAIKI: dari 24 menjadi 22
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8), // DIPERBAIKI: dari 10 menjadi 8
                 Text(
                   title,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFFF0EAFF),
-                    fontSize: 13,
+                    color: theme.textTheme.titleLarge?.color,
+                    fontSize: 12, // DIPERBAIKI: dari 13 menjadi 12
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
@@ -561,11 +666,11 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
-                    color: const Color(0xFF9B97B8),
-                    fontSize: 10,
+                    color: theme.textTheme.bodySmall?.color,
+                    fontSize: 9, // DIPERBAIKI: dari 10 menjadi 9
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1, // DIPERBAIKI: dari 2 menjadi 1
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -576,7 +681,9 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
     );
   }
 
-  Widget _buildRecentTransactions() {
+  Widget _buildRecentTransactions(bool isDark) {
+    final theme = Theme.of(context);
+    
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -586,25 +693,34 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
         final statusColor = transaction['statusColor'] as Color;
         final total = transaction['total'] as int;
         final isOffline = transaction['type'] == 'Offline';
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF16162A),
+            color: theme.cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+            border: isDark ? Border.all(color: const Color(0xFF1E1E35)) : null,
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Row(
             children: [
-              // Type Icon
+              // Icon - Fixed width
               Container(
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: isOffline 
-                      ? const Color(0xFFFF9800).withOpacity(0.15)
-                      : const Color(0xFF9B5EFF).withOpacity(0.15),
+                  color: isOffline
+                      ? const Color(0xFFFF9800).withOpacity(0.1)
+                      : const Color(0xFF9B5EFF).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -614,28 +730,34 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                 ),
               ),
               const SizedBox(width: 10),
+              
+              // Middle Content - Expanded with constraints
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // Row 1: ID, Status, Type
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      alignment: WrapAlignment.start,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           transaction['id'],
                           style: GoogleFonts.inter(
-                            color: const Color(0xFFF0EAFF),
+                            color: theme.textTheme.titleLarge?.color,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.15),
+                            color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: statusColor.withOpacity(0.3),
+                              color: statusColor.withOpacity(0.2),
                             ),
                           ),
                           child: Text(
@@ -647,18 +769,17 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: isOffline 
-                                ? const Color(0xFFFF9800).withOpacity(0.15)
-                                : const Color(0xFF9B5EFF).withOpacity(0.15),
+                            color: isOffline
+                                ? const Color(0xFFFF9800).withOpacity(0.1)
+                                : const Color(0xFF9B5EFF).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: isOffline 
-                                  ? const Color(0xFFFF9800).withOpacity(0.3)
-                                  : const Color(0xFF9B5EFF).withOpacity(0.3),
+                              color: isOffline
+                                  ? const Color(0xFFFF9800).withOpacity(0.2)
+                                  : const Color(0xFF9B5EFF).withOpacity(0.2),
                             ),
                           ),
                           child: Text(
@@ -672,27 +793,36 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                    const SizedBox(height: 4),
+                    
+                    // Row 2: Customer and Payment
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 2,
+                      alignment: WrapAlignment.start,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           transaction['customer'],
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF9B97B8),
+                            color: theme.textTheme.bodyMedium?.color,
                             fontSize: 11,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E35),
+                            color: isDark
+                                ? const Color(0xFF1E1E35)
+                                : const Color(0xFFF3F4F6),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             transaction['payment'],
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF9B97B8),
+                              color: theme.textTheme.bodySmall?.color,
                               fontSize: 8,
                             ),
                           ),
@@ -702,25 +832,34 @@ class _CashierDashboardPageState extends State<CashierDashboardPage> {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "Rp ${_formatPrice(total)}",
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF9B5EFF),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+              
+              // Right Content - Fixed width
+              SizedBox(
+                width: 100,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      "Rp ${_formatPrice(total)}",
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF9B5EFF),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                  ),
-                  Text(
-                    transaction['date'],
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF5C5878),
-                      fontSize: 9,
+                    Text(
+                      transaction['date'],
+                      style: GoogleFonts.inter(
+                        color: theme.textTheme.bodySmall?.color,
+                        fontSize: 9,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

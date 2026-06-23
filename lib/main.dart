@@ -1,28 +1,34 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:kanzza_sales_app_fe/core/theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'package:kanzza_sales_app_fe/core/theme/theme_provider.dart';
 import 'package:kanzza_sales_app_fe/routes.dart';
 
 void main() {
-  runApp(const KanzzaSalesApp());
+  runApp(const MyApp());
 }
 
-class KanzzaSalesApp extends StatelessWidget {
-  const KanzzaSalesApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Kanzza Sales',
-      theme: AppTheme.lightTheme,
-      initialRoute: AppRoutes.login,
-      routes: AppRoutes.routes,
-      // ⬇️ TAMBAHKAN INI ⬇️
-      navigatorKey: navigatorKey,
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Kanzza Frozen Food',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            initialRoute: AppRoutes.login,
+            routes: AppRoutes.routes,
+          );
+        },
+      ),
     );
   }
 }
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
