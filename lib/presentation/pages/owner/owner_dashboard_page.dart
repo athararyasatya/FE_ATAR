@@ -204,9 +204,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
 
   String _formatCurrency(double value) {
     if (value >= 1000000) {
-      return 'Rp ${(value / 1000000).toStringAsFixed(1)}M';
+      return 'Rp ${(value / 1000000).toStringAsFixed(1)}Jt';
     } else if (value >= 1000) {
-      return 'Rp ${(value / 1000).toStringAsFixed(0)}K';
+      return 'Rp ${(value / 1000).toStringAsFixed(0)}Rb';
     }
     return 'Rp ${_formatPrice(value)}';
   }
@@ -303,113 +303,110 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     );
   }
 
-
-// Header menjadi:
-Widget _buildHeader(bool isDark, bool isTablet, double hPad) {
-  return Container(
-    padding: EdgeInsets.only(
-      left: hPad,
-      right: hPad,
-      top: MediaQuery.of(context).padding.top + 16,
-      bottom: 16,
-    ),
-    decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF13102A) : Colors.white,
-      boxShadow: [
-        BoxShadow(
-          color: isDark ? Colors.black12 : Colors.black12,
-          blurRadius: isDark ? 0 : 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-      border: isDark
-          ? const Border(bottom: BorderSide(color: Color(0xFF1E1E35)))
-          : null,
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            "Dashboard Owner",
-            style: GoogleFonts.poppins(
-              color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
-              fontSize: isTablet ? 26 : 20,
-              fontWeight: FontWeight.w700,
+  Widget _buildHeader(bool isDark, bool isTablet, double hPad) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: hPad,
+        right: hPad,
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 16,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13102A) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black12 : Colors.black12,
+            blurRadius: isDark ? 0 : 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: isDark
+            ? const Border(bottom: BorderSide(color: Color(0xFF1E1E35)))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              "Dashboard Owner",
+              style: GoogleFonts.poppins(
+                color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
+                fontSize: isTablet ? 26 : 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ),
-        Row(
-          children: [
-            // HAPUS Container download_outlined di sini
-            const ThemeToggleButton(),
-            const SizedBox(width: 8),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF16162A) : const Color(0xFFF5F5FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF4B5563),
-                      size: 22,
-                    ),
-                    padding: EdgeInsets.zero,
+          Row(
+            children: [
+              const ThemeToggleButton(),
+              const SizedBox(width: 8),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF16162A) : const Color(0xFFF5F5FA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5252),
-                        shape: BoxShape.circle,
+                ),
+                child: Stack(
+                  children: [
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.notifications_outlined,
+                        color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF4B5563),
+                        size: 22,
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF5252),
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.red.shade400.withOpacity(0.15)
-                    : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+              const SizedBox(width: 8),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.red.shade400.withOpacity(0.3)
-                      : Colors.red.shade200,
+                      ? Colors.red.shade400.withOpacity(0.15)
+                      : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.red.shade400.withOpacity(0.3)
+                        : Colors.red.shade200,
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: _logout,
+                  icon: Icon(
+                    Icons.logout,
+                    color: isDark ? Colors.red.shade400 : Colors.red.shade400,
+                    size: 22,
+                  ),
+                  padding: EdgeInsets.zero,
                 ),
               ),
-              child: IconButton(
-                onPressed: _logout,
-                icon: Icon(
-                  Icons.logout,
-                  color: isDark ? Colors.red.shade400 : Colors.red.shade400,
-                  size: 22,
-                ),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildWelcomeSection(bool isTablet, bool isDark) {
     final kpi = _kpiData;
@@ -577,28 +574,28 @@ Widget _buildHeader(bool isDark, bool isTablet, double hPad) {
     
     final kpiCards = [
       {
-        'title': 'Total Revenue',
+        'title': 'Total Pendapatan',
         'value': _formatCurrency(kpi['totalRevenue']),
         'icon': Icons.attach_money,
         'color': const Color(0xFF4CAF50),
         'subtitle': '${kpi['totalOrders']} pesanan',
       },
       {
-        'title': 'Average Order',
+        'title': 'Rata-rata Pesanan',
         'value': _formatCurrency(kpi['averageOrderValue']),
         'icon': Icons.shopping_cart_outlined,
         'color': const Color(0xFF9B5EFF),
         'subtitle': 'Rp ${_formatPrice(kpi['averageOrderValue'])}',
       },
       {
-        'title': 'Customer Retention',
+        'title': 'Retensi Pelanggan',
         'value': '${(kpi['retentionRate'] * 100).toInt()}%',
         'icon': Icons.people_outline,
         'color': const Color(0xFF2196F3),
         'subtitle': '${kpi['totalCustomers']} pelanggan',
       },
       {
-        'title': 'Inventory Turnover',
+        'title': 'Perputaran Stok',
         'value': kpi['inventoryTurnover'].toStringAsFixed(1),
         'icon': Icons.inventory_2_outlined,
         'color': const Color(0xFFFF9800),
@@ -1460,7 +1457,6 @@ Widget _buildHeader(bool isDark, bool isTablet, double hPad) {
         final statusColor = order['statusColor'] as Color;
         final total = order['total'] as int;
         
-        // Cast dengan aman
         final String id = order['id']?.toString() ?? '';
         final String status = order['status']?.toString() ?? '';
         final String customer = order['customer']?.toString() ?? '';

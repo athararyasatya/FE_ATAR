@@ -1,122 +1,85 @@
+// lib/core/widgets/gradient_nav_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GradientNavBar extends StatelessWidget {
   final int currentIndex;
-  final ValueChanged<int> onTap;
+  final Function(int) onTap;
+  final bool isDark;
 
   const GradientNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.isDark = true,
   });
-
-  static const _items = [
-    _NavItem(icon: Icons.home_rounded, label: "Home"),
-    _NavItem(icon: Icons.receipt_long_rounded, label: "Order"),
-    _NavItem(icon: Icons.shopping_cart_rounded, label: "Cart"),
-    _NavItem(icon: Icons.person_rounded, label: "Profile"),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    final sw = MediaQuery.of(context).size.width;
-
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF110E1F), Color(0xFF0D0D12), Color(0xFF0D0D12)],
-          stops: [0.0, 0.35, 1.0],
-        ),
-        border: Border(
-          top: BorderSide(color: Color(0xFF1E1A30), width: 1),
-        ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13102A) : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Color(0x339B5EFF),
-            blurRadius: 16,
-            offset: Offset(0, -2),
+            color: isDark ? Colors.black12 : Colors.black12,
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
         ],
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE5E7EB),
+          ),
+        ),
       ),
       child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: sw > 400 ? 68 : 62,
-          child: Row(
-            children: List.generate(_items.length, (index) {
-              final selected = currentIndex == index;
-              final item = _items[index];
-
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(index),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? const Color(0xFF9B5EFF).withValues(alpha: .18)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: selected
-                            ? ShaderMask(
-                                blendMode: BlendMode.srcIn,
-                                shaderCallback: (bounds) => const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFFE0BAFF), Color(0xFF9B5EFF)],
-                                ).createShader(bounds),
-                                child: Icon(item.icon, size: 22),
-                              )
-                            : Icon(item.icon, color: const Color(0xFF8B8BA8), size: 22),
-                      ),
-                      const SizedBox(height: 4),
-                      selected
-                          ? ShaderMask(
-                              blendMode: BlendMode.srcIn,
-                              shaderCallback: (bounds) => const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFFE0BAFF), Color(0xFF9B5EFF)],
-                              ).createShader(bounds),
-                              child: Text(
-                                item.label,
-                                style: GoogleFonts.inter(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              item.label,
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF8B8BA8),
-                              ),
-                            ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home_outlined, Icons.home, "Beranda", 0),
+            _buildNavItem(Icons.receipt_long_outlined, Icons.receipt_long, "Pesanan", 1),
+            _buildNavItem(Icons.shopping_cart_outlined, Icons.shopping_cart, "Keranjang", 2),
+            _buildNavItem(Icons.person_outlined, Icons.person, "Profil", 3),
+          ],
         ),
       ),
     );
   }
-}
 
-class _NavItem {
-  final IconData icon;
-  final String label;
-  const _NavItem({required this.icon, required this.label});
+  Widget _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
+    final isSelected = currentIndex == index;
+    final color = isSelected
+        ? const Color(0xFF9B5EFF)
+        : isDark
+            ? const Color(0xFF9B97B8)
+            : const Color(0xFF6B7280);
+
+    return GestureDetector(
+      onTap: () => onTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: color,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: color,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

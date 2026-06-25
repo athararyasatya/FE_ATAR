@@ -1,16 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     
-    <!-- Izin untuk menyimpan file ke storage -->
+    <!-- Izin dasar yang diperlukan -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" 
-        tools:ignore="ScopedStorage" />
-    
-    <!-- Izin untuk Android 13+ -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     
     <application
         android:label="kanzza_sales_app_fe"
@@ -39,12 +33,13 @@
             </intent-filter>
         </activity>
         
-        <!-- Don't delete the meta-data below. This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Don't delete the meta-data below -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
             
-        <!-- Provider untuk share file -->
+        <!-- HAPUS FileProvider sementara sampai file_paths.xml benar-benar ada -->
+        <!-- 
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -54,22 +49,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        -->
     </application>
     
-    <!-- Required to query activities that can process text -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
-        </intent>
-        <!-- Untuk share file -->
-        <intent>
-            <action android:name="android.intent.action.SEND"/>
-            <data android:mimeType="*/*"/>
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SEND_MULTIPLE"/>
-            <data android:mimeType="*/*"/>
         </intent>
     </queries>
 </manifest>

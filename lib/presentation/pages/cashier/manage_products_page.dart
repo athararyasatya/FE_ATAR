@@ -1,10 +1,11 @@
 // lib/presentation/pages/cashier/manage_products_page.dart
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:kanzza_sales_app_fe/core/theme/theme_provider.dart';
 import 'package:kanzza_sales_app_fe/routes.dart';
@@ -25,11 +26,12 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
   
   String _selectedCategory = "Snack";
   File? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
   bool _isLoading = false;
   bool _isEditing = false;
   int? _editingId;
   
-  // Daftar produk (simulasi database)
   List<Map<String, dynamic>> _products = [
     {
       'id': 1,
@@ -78,6 +80,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     ).toList();
   }
 
+  // ============ FUNGSI FORMAT PRICE ============
   String _formatPrice(int price) {
     return price.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -85,28 +88,23 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     );
   }
 
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 80,
-    );
-    
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
-    }
+  // ============ FUNGSI SIMULASI UPLOAD IMAGE ============
+  void _pickImage() {
+    setState(() {
+      _selectedImageName = "product_${DateTime.now().millisecondsSinceEpoch}.jpg";
+    });
+    _showSnackBar("📷 Foto berhasil dipilih: $_selectedImageName", Colors.green);
   }
 
+  // ============ FUNGSI LAINNYA ============
   void _resetForm() {
     setState(() {
       _nameController.clear();
       _priceController.clear();
       _stockController.clear();
       _selectedImage = null;
+      _selectedImageBytes = null;
+      _selectedImageName = null;
       _selectedCategory = "Snack";
       _isEditing = false;
       _editingId = null;
@@ -121,12 +119,13 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       _priceController.text = product['price'].toString();
       _stockController.text = product['stock'].toString();
       _selectedCategory = product['category'];
-      _selectedImage = product['image'] != null ? File(product['image']) : null;
+      _selectedImage = null;
+      _selectedImageBytes = null;
+      _selectedImageName = product['image'];
     });
   }
 
   void _saveProduct() {
-    // Validasi
     if (_nameController.text.trim().isEmpty) {
       _showSnackBar("Nama produk harus diisi!", Colors.orange);
       return;
@@ -159,11 +158,11 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       _isLoading = true;
     });
 
-    // Simulasi delay
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
+        String? imageData = _selectedImageName;
+        
         if (_isEditing && _editingId != null) {
-          // Edit produk
           final index = _products.indexWhere((p) => p['id'] == _editingId);
           if (index != -1) {
             _products[index] = {
@@ -172,19 +171,18 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
               'price': price,
               'category': _selectedCategory,
               'stock': stock,
-              'image': _selectedImage?.path,
+              'image': imageData,
             };
           }
           _showSnackBar("✅ Produk berhasil diperbarui!", Colors.green);
         } else {
-          // Tambah produk baru
           final newProduct = {
             'id': _products.length + 1,
             'name': _nameController.text.trim(),
             'price': price,
             'category': _selectedCategory,
             'stock': stock,
-            'image': _selectedImage?.path,
+            'image': imageData,
             'popular': false,
           };
           _products.insert(0, newProduct);
@@ -280,6 +278,65 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     );
   }
 
+  Widget _buildUploadPlaceholder(bool isDark) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.cloud_upload_outlined,
+          color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+          size: 40,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Tap untuk upload foto produk",
+          style: GoogleFonts.inter(
+            color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
+            fontSize: 13,
+          ),
+        ),
+        if (_selectedImageName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            _selectedImageName!,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF9B5EFF),
+              fontSize: 11,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildProductImage(Map<String, dynamic> product, bool isDark) {
+    bool hasImage = product['image'] != null && product['image'].toString().isNotEmpty;
+    
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: hasImage
+          ? Center(
+              child: Icon(
+                Icons.image_outlined,
+                color: isDark ? const Color(0xFF5C5878) : const Color(0xFF9CA3AF),
+                size: 28,
+              ),
+            )
+          : Icon(
+              Icons.inventory_2_outlined,
+              color: isDark ? const Color(0xFF5C5878) : const Color(0xFF9CA3AF),
+              size: 28,
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -309,7 +366,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
         ),
         child: Column(
           children: [
-            // Header
+            // HEADER
             Container(
               padding: EdgeInsets.only(
                 left: hPad,
@@ -403,7 +460,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
               ),
             ),
 
-            // Content
+            // CONTENT
             Expanded(
               child: Column(
                 children: [
@@ -537,27 +594,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       child: Row(
         children: [
           // Image
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(10),
-              image: product['image'] != null && File(product['image']).existsSync()
-                  ? DecorationImage(
-                      image: FileImage(File(product['image'])),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: product['image'] == null || !File(product['image']).existsSync()
-                ? Icon(
-                    Icons.inventory_2_outlined,
-                    color: isDark ? const Color(0xFF5C5878) : const Color(0xFF9CA3AF),
-                    size: 28,
-                  )
-                : null,
-          ),
+          _buildProductImage(product, isDark),
           const SizedBox(width: 12),
           
           // Info
@@ -576,7 +613,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Row(
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 2,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -596,7 +635,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
@@ -621,8 +659,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                         ),
                       ),
                     ),
-                    if (product['popular'] == true) ...[
-                      const SizedBox(width: 6),
+                    if (product['popular'] == true)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
@@ -641,7 +678,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                           ),
                         ),
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -776,10 +812,10 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Upload Image
+                    // Upload Image (Simulasi)
                     GestureDetector(
-                      onTap: () async {
-                        await _pickImage();
+                      onTap: () {
+                        _pickImage();
                         setStateDialog(() {});
                       },
                       child: Container(
@@ -793,34 +829,30 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                             style: BorderStyle.solid,
                           ),
                         ),
-                        child: _selectedImage != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: 120,
+                        child: _selectedImageName != null
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.image_outlined,
+                                      color: const Color(0xFF9B5EFF),
+                                      size: 40,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _selectedImageName!,
+                                      style: GoogleFonts.inter(
+                                        color: const Color(0xFF9B5EFF),
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.cloud_upload_outlined,
-                                    color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
-                                    size: 40,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Tap untuk upload foto produk",
-                                    style: GoogleFonts.inter(
-                                      color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            : _buildUploadPlaceholder(isDark),
                       ),
                     ),
                     const SizedBox(height: 16),
