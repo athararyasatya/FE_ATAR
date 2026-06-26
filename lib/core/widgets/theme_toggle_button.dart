@@ -14,6 +14,67 @@ class ThemeToggleButton extends StatelessWidget {
     this.size = 44,
   });
 
+  void _showThemeSnackBar(BuildContext context, bool isDark) {
+    // Hilangkan snackbar sebelumnya
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    final snackBar = SnackBar(
+      content: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            isDark ? 'Mode Terang' : 'Mode Gelap',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isDark ? '☀️' : '🌙',
+            style: const TextStyle(fontSize: 16),
+          ),
+        ],
+      ),
+      backgroundColor: isDark 
+          ? Colors.grey.shade900.withOpacity(0.95) 
+          : const Color(0xFF7C3AED).withOpacity(0.95),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      duration: const Duration(milliseconds: 1200),
+      margin: const EdgeInsets.only(
+        top: 60,
+        left: 24,
+        right: 24,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 12,
+      ),
+      elevation: 8,
+      dismissDirection: DismissDirection.horizontal,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -22,20 +83,7 @@ class ThemeToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         themeProvider.toggleTheme();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isDark ? '🌞 Mode Terang' : '🌙 Mode Gelap',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: isDark ? Colors.grey.shade800 : const Color(0xFF9B5EFF),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        _showThemeSnackBar(context, isDark);
       },
       child: Container(
         width: size,
@@ -50,6 +98,15 @@ class ThemeToggleButton extends StatelessWidget {
                 ? const Color(0xFF2D2D45)
                 : const Color(0xFFE5E7EB),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark 
+                  ? Colors.black.withOpacity(0.2) 
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Icon(
           isDark ? Icons.light_mode : Icons.dark_mode,

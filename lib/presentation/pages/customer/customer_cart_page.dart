@@ -1,6 +1,10 @@
+// lib/presentation/pages/customer/customer_cart_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:kanzza_sales_app_fe/core/theme/theme_provider.dart';
 import '../../../data/models/cart_item.dart';
 import 'customer_checkout_page.dart';
 
@@ -107,7 +111,6 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
       return;
     }
     
-    // Navigasi ke halaman checkout
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -120,25 +123,30 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
   }
 
   void _showDeleteAllDialog() {
+    final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    final theme = Theme.of(context);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF16162A),
+        backgroundColor: theme.cardTheme.color,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF1E1E35)),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
+          ),
         ),
         title: Text(
           "Hapus Semua Item?",
           style: GoogleFonts.poppins(
-            color: const Color(0xFFF0EAFF),
+            color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
             fontWeight: FontWeight.w600,
           ),
         ),
         content: Text(
           "Apakah Anda yakin ingin menghapus semua item dari keranjang?",
           style: GoogleFonts.inter(
-            color: const Color(0xFF9B97B8),
+            color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
           ),
         ),
         actions: [
@@ -147,7 +155,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
             child: Text(
               "Batal",
               style: GoogleFonts.inter(
-                color: const Color(0xFF9B97B8),
+                color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
               ),
             ),
           ),
@@ -193,25 +201,34 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
     final sw = MediaQuery.of(context).size.width;
     final hPad = sw * 0.04;
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    SystemChrome.setSystemUIOverlayStyle(
+      isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF13102A), Color(0xFF0D0D12)],
+            colors: isDark
+                ? [const Color(0xFF13102A), const Color(0xFF0D0D12)]
+                : [const Color(0xFFF5F5FA), const Color(0xFFE8E8F0)],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header
+              // ============ HEADER - FIXED ============
               Container(
                 padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
                 child: Row(
@@ -223,13 +240,15 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16162A),
+                          color: isDark ? const Color(0xFF16162A) : const Color(0xFFF5F5FA),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE8E8F0),
+                          ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.arrow_back_rounded,
-                          color: Color(0xFFF0EAFF),
+                          color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
                           size: 22,
                         ),
                       ),
@@ -242,7 +261,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           Text(
                             "Keranjang Belanja",
                             style: GoogleFonts.poppins(
-                              color: const Color(0xFFF0EAFF),
+                              color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                             ),
@@ -250,7 +269,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           Text(
                             "$totalItems item • Rp ${_formatPrice(totalPrice)}",
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF9B97B8),
+                              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
                               fontSize: 12,
                             ),
                           ),
@@ -265,9 +284,9 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
+                            color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
                           ),
                           child: const Icon(
                             Icons.delete_outline_rounded,
@@ -284,14 +303,14 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
               // Cart Items List
               Expanded(
                 child: cartItems.isEmpty
-                    ? _buildEmptyCart()
+                    ? _buildEmptyCart(isDark)
                     : ListView.builder(
                         padding: EdgeInsets.symmetric(horizontal: hPad),
                         physics: const BouncingScrollPhysics(),
                         itemCount: cartItems.length,
                         itemBuilder: (context, index) {
                           final item = cartItems[index];
-                          return _buildCartItem(item);
+                          return _buildCartItem(item, isDark);
                         },
                       ),
               ),
@@ -301,14 +320,26 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                 Container(
                   padding: EdgeInsets.all(hPad),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16162A),
+                    color: isDark ? const Color(0xFF16162A) : Colors.white,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
                     border: Border(
-                      top: BorderSide(color: const Color(0xFF1E1E35), width: 1),
+                      top: BorderSide(
+                        color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFE5E7EB),
+                        width: 1,
+                      ),
                     ),
+                    boxShadow: isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
                   ),
                   child: Column(
                     children: [
@@ -318,7 +349,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           Text(
                             "Total Belanja",
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF9B97B8),
+                              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
                               fontSize: 14,
                             ),
                           ),
@@ -339,14 +370,14 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           Text(
                             "Biaya Pengiriman",
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF9B97B8),
+                              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
                               fontSize: 12,
                             ),
                           ),
                           Text(
                             "Dihitung saat checkout",
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF5C5878),
+                              color: isDark ? const Color(0xFF5C5878) : const Color(0xFF9CA3AF),
                               fontSize: 11,
                             ),
                           ),
@@ -367,7 +398,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.shopping_cart_checkout, size: 18),
+                              const Icon(Icons.shopping_cart_checkout, size: 18, color: Colors.white),
                               const SizedBox(width: 8),
                               Text(
                                 "Lanjutkan ke Pembayaran",
@@ -391,14 +422,25 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     );
   }
 
-  Widget _buildCartItem(CartItem item) {
+  Widget _buildCartItem(CartItem item, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF16162A),
+        color: isDark ? const Color(0xFF16162A) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E1E35), width: 1),
+        border: isDark
+            ? Border.all(color: const Color(0xFF1E1E35), width: 1)
+            : Border.all(color: const Color(0xFFE5E7EB), width: 1),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -407,7 +449,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E35),
+              color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
@@ -430,7 +472,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFFF0EAFF),
+                    color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -444,7 +486,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                       item.rating.toString(),
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: const Color(0xFF9B97B8),
+                        color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -466,8 +508,11 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                     // Quantity Control
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E35),
+                        color: isDark ? const Color(0xFF1E1E35) : const Color(0xFFF3F4F6),
                         borderRadius: BorderRadius.circular(8),
+                        border: isDark
+                            ? null
+                            : Border.all(color: const Color(0xFFE5E7EB)),
                       ),
                       child: Row(
                         children: [
@@ -475,10 +520,10 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                             onTap: () => _updateQuantity(item.id, item.quantity - 1),
                             child: Container(
                               padding: const EdgeInsets.all(8),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.remove,
                                 size: 16,
-                                color: Color(0xFF9B97B8),
+                                color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
                               ),
                             ),
                           ),
@@ -489,7 +534,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFFF0EAFF),
+                                color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
                               ),
                             ),
                           ),
@@ -516,9 +561,9 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
+                            color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -552,7 +597,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
     );
   }
 
-  Widget _buildEmptyCart() {
+  Widget _buildEmptyCart(bool isDark) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -561,13 +606,13 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF16162A),
+              color: isDark ? const Color(0xFF16162A) : const Color(0xFFF3F4F6),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.shopping_cart_outlined,
               size: 50,
-              color: Color(0xFF5C5878),
+              color: isDark ? const Color(0xFF5C5878) : const Color(0xFF9CA3AF),
             ),
           ),
           const SizedBox(height: 24),
@@ -576,7 +621,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFFF0EAFF),
+              color: isDark ? const Color(0xFFF0EAFF) : const Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 8),
@@ -584,7 +629,7 @@ class _CustomerCartPageState extends State<CustomerCartPage> {
             "Yuk, tambahkan produk favoritmu!",
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: const Color(0xFF9B97B8),
+              color: isDark ? const Color(0xFF9B97B8) : const Color(0xFF6B7280),
             ),
           ),
           const SizedBox(height: 24),
